@@ -1,0 +1,147 @@
+#' Estimate Network using Neighborhood Selection based on Information Criteria
+#'
+#' @param data Raw data containing only the variables to be included in the network. May include missing values.
+#' @param ns Numeric vector specifying the sample size for each variable in the data.
+#' If not provided, it will be computed based on the data.
+#' Must be provided if a correlation matrix (`mat`) is supplied instead of raw data.
+#' @param mat Optional covariance or correlation matrix for the variables to be included in the network.
+#' Used only if \code{data} is \code{NULL}.
+#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternitavely, classical AIC would be `k = 2`.
+#' @param n_calc Method for calculating the sample size for node-wise regression models.
+#' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
+#' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
+#' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
+#' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
+#' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
+#'
+#' @return A list with the following elements:
+#' \describe{
+#'   \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
+#'   \item{betas}{Matrix of regression coefficients from the final regression models.}
+#' }
+#' @export
+#'
+#' @examples
+#' # LATER
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = c("average", "individual", "max", "total"),
+                             missing_handling = c("two-step-em", "stacked-mi"),
+                             k = "log(n)", nimp = 20, pcor_merge_rule = c("and", "or")){
+
+  n_calc <- match.arg(tolower(n_calc))
+  missing_handling <- match.arg(tolower(missing_handling))
+  pcor_merge_rule <- match.arg(tolower(pcor_merge_rule))
+
+  # Check: Which input is provided?
+  checker(data = data, mat = mat)
+
+
+  if (!is.null(data)) {
+    if (anyNA(data)){
+      if (missing_handling == "two-step-em"){
+
+        if (!requireNamespace("lavaan", quietly = TRUE)) {
+          stop(
+            "Package \"lavaan\" must be installed to use this function.",
+            call. = FALSE
+          )
+        }
+
+        lavobject <- suppressWarnings(try(lavaan::lavCor(data,
+                                                         missing = "ml", se = "none", meanstructure = TRUE,
+                                                         estimator = "ML", output = "fit")))
+        if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
+        mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
+
+      } else if (missing_handling == "stacked-mi"){
+
+        if (!requireNamespace("mice", quietly = TRUE)) {
+          stop(
+            "Package \"mice\" must be installed to use this function.",
+            call. = FALSE
+          )
+        }
+
+        imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = 'pmm',
+                                                    ridge = 0, donors = 5, ls.method = "qr"))
+        stacked_data <- mice::complete(imputed_data, c(1:nimp))
+        mat <- stats::cor(stacked_data)
+
+      }
+    } else {
+      mat <- stats::cor(data)
+    }
+
+    if (is.null(ns)){
+      if (!(n_calc %in% c("individual", "average", "max", "total"))){
+        stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
+      }
+      ns <- calculate_sample_size(data = data, n_calc = n_calc)
+    } else checker(ns = ns, mat = mat)
+  } else if (!is.null(mat)) {
+    if (is.null(ns)) {
+      stop("If 'mat' is provided, 'ns' must also be specified.")
+    }
+    checker(ns = ns, mat = mat)
+    mat <- stats::cov2cor(mat)
+  }
+
+  mod <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = pcor_merge_rule)
+
+  return(list(pcor = mod$partials, betas = mod$beta_mat))
+}
+
+
+
+neighborhood_sel <- function(mat, ns, k = k, pcor_merge_rule = "and"){
+
+  class(mat) <- "matrix"              # be sure that mat is of class matrix
+  checker(ns = ns, mat = mat)
+
+  if(!(pcor_merge_rule %in% c("and", "or"))){
+    stop("Partial correlation merge rule must be either 'and' or 'or'.")
+  }
+
+  p <- ncol(mat)                      # number of variables
+  beta_mat <- matrix(NA, p, p)        # initialize matrix for regression coefficients
+
+  # calculate sample size for each variable
+
+
+  for (dep in 1:p){
+    possible_preds <- (1:p)[-dep]  # possible predictors for dependent variable
+    n <- ns[dep]                # sample size for dependent variable
+    # perform neighorhood selection for dependent node
+    mod <- pred_search(mat = mat, dep_ind = dep, possible_pred_ind = possible_preds,
+                  n = n, k = k)
+    # store regression coefficients in beta matrix
+    beta_mat[dep, mod$actual_preds] <- mod$actual_betas
+  }
+
+  # compute partial correlations from the resulting beta matrix
+  partials <- compute_partials(mod$beta_mat, pcor_merge_rule)
+
+  return(list(partials = partials, beta_mat = beta_mat))
+
+}
+
+
+compute_partials <- function(betas, rule = c("and", "or")){
+
+  rule <- match.arg(rule)
+
+  if (rule == "or"){
+    # replace missing entry with estimated entry on the opposing side of the diagonal
+    betas[upper.tri(betas)][is.na(betas[upper.tri(betas)])]  <- betas[lower.tri(betas)][is.na(betas[upper.tri(betas)])]
+    betas[lower.tri(betas)][is.na(betas[lower.tri(betas)])]  <- betas[upper.tri(betas)][is.na(betas[lower.tri(betas)])]
+  }
+  Dummy <- betas * t(betas) # values for the partial correlations
+
+  Dummy[Dummy < 0] <- 0  # look for entries with differing signs of beta
+  Dummy[Dummy > 1] <- 1  # bounded between 0 and 1
+
+  wadj <- sign(betas) * sqrt(Dummy) # add the corresponding sign to the partial correlation
+  wadj[is.na(wadj)] <- 0 # replace NA with 0
+  adj <- ifelse(wadj == 0, 0, 1)
+
+  return(list(wadj = wadj, adj = adj))
+}
