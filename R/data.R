@@ -24,8 +24,11 @@
 #' }
 #'
 #' @examples
+#' # Load the data sets
 #' data(mantar_dummy_full)
 #' data(mantar_dummy_mis)
+#'
+#' # View the first few rows of each data set
 #' head(mantar_dummy_full)
 #' head(mantar_dummy_mis)
 #'
