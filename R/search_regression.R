@@ -1,4 +1,4 @@
-#' Title
+#' Stepwise Multiple Regression Search based on Information Criteria
 #'
 #' @param data Raw data containing only the variables to be tested within the multiple regression as dependent or independent variable. May include missing values.
 #' @param n Numeric value specifying the sample size used in calculating information criteria for model search.
@@ -6,9 +6,15 @@
 #' If a correlation matrix (`mat`) is supplied instead of raw data, `n` must be provided.
 #' @param mat Optional covariance or correlation matrix for the variables to be used within the multiple regression.
 #' #' Used only if \code{data} is \code{NULL}.
-#' @param dep_ind Index of the dependent variable in the regression model.
-#' @param n_calc Method for calculating the sample size used in calculating information criteria for model search.
+#' @param dep_ind Index of the column within a data set to be used as dependent variable within in the regression model.
+#' @param n_calc Method for calculating the sample size for node-wise regression models. Can be one of:
+#' `"individual"` (sample size for each variable is the number of non-missing observations for that variable),
+#' `"average"` (sample size is the average number of non-missing observations across all variables),
+#' `"max"` (sample size is the maximum number of non-missing observations across all variables),
+#' `"total"` (sample size is the total number of observations across in the data set / number of rows).
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
+#' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
+#' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
 #' @param k Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be `k = 2`.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #'
@@ -21,14 +27,39 @@
 #' @export
 #'
 #' @examples
-#' # LATER
+#' # For full data using AIC
+#' # First variable of the data set as dependent variable
+#' result <- regression_opt(
+#'   data = mantar_dummy_full,
+#'   dep_ind = 1,
+#'   k = "2"
+#' )
+#'
+#' # View regression coefficients and R-squared
+#' result$regression
+#' result$R2
+#'
+#' # For data with missingess using BIC
+#' # Second variable of the data set as dependent variable
+#' # Using individual sample size of the dependent variable and stacked Multiple Imputation
+#'
+#' result_mis <- regression_opt(
+#'  data = mantar_dummy_mis,
+#'  dep_ind = 2,
+#'  n_calc = "individual",
+#'  missing_handling = "stacked-mi",
+#'  )
+#'
+#'  # View regression coefficients and R-squared
+#'  result_mis$regression
+#'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
-                           n_calc = c("average", "individual", "max", "total"),
-                           missing_handling = c("two-step-em", "stacked-mi"),
+                           n_calc = "individual",
+                           missing_handling = "two-step-em",
                            k = "log(n)", nimp = 20) {
 
-  n_calc <- match.arg(tolower(n_calc))
-  missing_handling <- match.arg(tolower(missing_handling))
+  n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
+  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
@@ -79,12 +110,14 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
             call. = FALSE
           )
         }
+        original_names <- colnames(data)
+        colnames(data) <- make.names(original_names)
 
         imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = 'pmm',
                                                     ridge = 0, donors = 5, ls.method = "qr"))
         stacked_data <- mice::complete(imputed_data, c(1:nimp))
+        colnames(stacked_data) <- original_names  # restore original column names
         mat <- stats::cor(stacked_data)
-
       }
     } else {
       mat <- stats::cor(data)
@@ -160,9 +193,13 @@ pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
 
       # calculate information criteria for the model
       # if there are no predictors, the information criteria is the one from the null model
-      if(is.null(mod_betas)) IC <- null_IC
-      # if there are predictors, calculate the information criteria for the model
-      else IC <- reg_ic_calc(resid_var = mod_resid_var, n = n, n_preds = length(mod_preds), k = k)
+      if(is.null(mod_betas)) {
+        mod_resid_var <- null_mod$resid_var
+        IC <- null_IC
+      } else {
+        # if there are predictors, calculate the information criteria for the model
+        IC <- reg_ic_calc(resid_var = mod_resid_var, n = n, n_preds = length(mod_preds), k = k)
+      }
 
       return(list(IC = IC, mod_preds = mod_preds, mod_betas = mod_betas, mod_resid_var = mod_resid_var))
     })
@@ -183,14 +220,14 @@ pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
       # extract predictors and regression coefficients from the best model
       actual_preds <- mod_preds[mod_num] |> unlist()
       actual_betas <- mod_betas[mod_num] |> unlist()
-      actual_resid_var <- mod_resid_vars[mod_num]
+      actual_resid_var <- mod_resid_vars[mod_num] |> unlist()
     } else{
       # if there is no model with a lower information criteria than the best model so far
       break
     }
   }
 
-  return(list(actual_preds = actual_preds, actual_betas = actual_betas, actual_resid_var, best_IC = best_IC))
+  return(list(actual_preds = actual_preds, actual_betas = actual_betas, actual_resid_var = actual_resid_var, best_IC = best_IC))
 
 }
 

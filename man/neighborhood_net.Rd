@@ -8,11 +8,11 @@ neighborhood_net(
   data = NULL,
   ns = NULL,
   mat = NULL,
-  n_calc = c("average", "individual", "max", "total"),
-  missing_handling = c("two-step-em", "stacked-mi"),
+  n_calc = "individual",
+  missing_handling = "two-step-em",
   k = "log(n)",
   nimp = 20,
-  pcor_merge_rule = c("and", "or")
+  pcor_merge_rule = "and"
 )
 }
 \arguments{
@@ -25,11 +25,17 @@ Must be provided if a correlation matrix (\code{mat}) is supplied instead of raw
 \item{mat}{Optional covariance or correlation matrix for the variables to be included in the network.
 Used only if \code{data} is \code{NULL}.}
 
-\item{n_calc}{Method for calculating the sample size for node-wise regression models.}
+\item{n_calc}{Method for calculating the sample size for node-wise regression models. Can be one of:
+\code{"individual"} (sample size for each variable is the number of non-missing observations for that variable),
+\code{"average"} (sample size is the average number of non-missing observations across all variables),
+\code{"max"} (sample size is the maximum number of non-missing observations across all variables),
+\code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
 
-\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.}
+\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
+\code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
+\code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.}
 
-\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternitavely, classical AIC would be \code{k = 2}.}
+\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
 
@@ -48,5 +54,20 @@ A list with the following elements:
 Estimate Network using Neighborhood Selection based on Information Criteria
 }
 \examples{
-# LATER
+# Estimate network from full data set
+# Using Akaike information criterion
+result <- neighborhood_net(data = mantar_dummy_full,
+k = "2")
+
+# View estimated partial correlations
+result$pcor
+
+# Estimate network for data set with missings
+# Using Bayesian Information Criterion, individual sample sizes, and two-step EM
+result_mis <- neighborhood_net(data = mantar_dummy_mis,
+n_calc = "individual",
+missing_handling = "two-step-em")
+
+# View estimated partial correlations
+result_mis$pcor
 }

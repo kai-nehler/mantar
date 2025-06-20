@@ -6,9 +6,15 @@
 #' Must be provided if a correlation matrix (`mat`) is supplied instead of raw data.
 #' @param mat Optional covariance or correlation matrix for the variables to be included in the network.
 #' Used only if \code{data} is \code{NULL}.
-#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternitavely, classical AIC would be `k = 2`.
-#' @param n_calc Method for calculating the sample size for node-wise regression models.
+#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
+#' @param n_calc Method for calculating the sample size for node-wise regression models. Can be one of:
+#' `"individual"` (sample size for each variable is the number of non-missing observations for that variable),
+#' `"average"` (sample size is the average number of non-missing observations across all variables),
+#' `"max"` (sample size is the maximum number of non-missing observations across all variables),
+#' `"total"` (sample size is the total number of observations across in the data set / number of rows).
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
+#' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
+#' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
@@ -22,14 +28,29 @@
 #' @export
 #'
 #' @examples
-#' # LATER
-neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = c("average", "individual", "max", "total"),
-                             missing_handling = c("two-step-em", "stacked-mi"),
-                             k = "log(n)", nimp = 20, pcor_merge_rule = c("and", "or")){
+#' # Estimate network from full data set
+#' # Using Akaike information criterion
+#' result <- neighborhood_net(data = mantar_dummy_full,
+#' k = "2")
+#'
+#' # View estimated partial correlations
+#' result$pcor
+#'
+#' # Estimate network for data set with missings
+#' # Using Bayesian Information Criterion, individual sample sizes, and two-step EM
+#' result_mis <- neighborhood_net(data = mantar_dummy_mis,
+#' n_calc = "individual",
+#' missing_handling = "two-step-em")
+#'
+#' # View estimated partial correlations
+#' result_mis$pcor
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual",
+                             missing_handling = "two-step-em",
+                             k = "log(n)", nimp = 20, pcor_merge_rule = "and"){
 
-  n_calc <- match.arg(tolower(n_calc))
-  missing_handling <- match.arg(tolower(missing_handling))
-  pcor_merge_rule <- match.arg(tolower(pcor_merge_rule))
+  n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
+  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi"))
+  pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
@@ -60,10 +81,13 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = c("ave
             call. = FALSE
           )
         }
+        original_names <- colnames(data)
+        colnames(data) <- make.names(original_names)
 
         imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = 'pmm',
                                                     ridge = 0, donors = 5, ls.method = "qr"))
         stacked_data <- mice::complete(imputed_data, c(1:nimp))
+        colnames(stacked_data) <- original_names  # restore original column names
         mat <- stats::cor(stacked_data)
 
       }
@@ -76,7 +100,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = c("ave
         stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
       }
       ns <- calculate_sample_size(data = data, n_calc = n_calc)
-    } else checker(ns = ns, mat = mat)
+    } else checker(ns = ns, data = data)
   } else if (!is.null(mat)) {
     if (is.null(ns)) {
       stop("If 'mat' is provided, 'ns' must also be specified.")
@@ -92,14 +116,11 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = c("ave
 
 
 
-neighborhood_sel <- function(mat, ns, k = k, pcor_merge_rule = "and"){
+neighborhood_sel <- function(mat, ns, k, pcor_merge_rule){
 
   class(mat) <- "matrix"              # be sure that mat is of class matrix
   checker(ns = ns, mat = mat)
 
-  if(!(pcor_merge_rule %in% c("and", "or"))){
-    stop("Partial correlation merge rule must be either 'and' or 'or'.")
-  }
 
   p <- ncol(mat)                      # number of variables
   beta_mat <- matrix(NA, p, p)        # initialize matrix for regression coefficients
@@ -118,16 +139,14 @@ neighborhood_sel <- function(mat, ns, k = k, pcor_merge_rule = "and"){
   }
 
   # compute partial correlations from the resulting beta matrix
-  partials <- compute_partials(mod$beta_mat, pcor_merge_rule)
+  partials <- compute_partials(betas = beta_mat, rule = pcor_merge_rule)
 
-  return(list(partials = partials, beta_mat = beta_mat))
+  return(list(partials = partials$wadj, beta_mat = beta_mat))
 
 }
 
 
-compute_partials <- function(betas, rule = c("and", "or")){
-
-  rule <- match.arg(rule)
+compute_partials <- function(betas, rule){
 
   if (rule == "or"){
     # replace missing entry with estimated entry on the opposing side of the diagonal

@@ -2,15 +2,15 @@
 % Please edit documentation in R/search_regression.R
 \name{regression_opt}
 \alias{regression_opt}
-\title{Title}
+\title{Stepwise Multiple Regression Search based on Information Criteria}
 \usage{
 regression_opt(
   data = NULL,
   n = NULL,
   mat = NULL,
   dep_ind,
-  n_calc = c("average", "individual", "max", "total"),
-  missing_handling = c("two-step-em", "stacked-mi"),
+  n_calc = "individual",
+  missing_handling = "two-step-em",
   k = "log(n)",
   nimp = 20
 )
@@ -25,11 +25,17 @@ If a correlation matrix (\code{mat}) is supplied instead of raw data, \code{n} m
 \item{mat}{Optional covariance or correlation matrix for the variables to be used within the multiple regression.
 #' Used only if \code{data} is \code{NULL}.}
 
-\item{dep_ind}{Index of the dependent variable in the regression model.}
+\item{dep_ind}{Index of the column within a data set to be used as dependent variable within in the regression model.}
 
-\item{n_calc}{Method for calculating the sample size used in calculating information criteria for model search.}
+\item{n_calc}{Method for calculating the sample size for node-wise regression models. Can be one of:
+\code{"individual"} (sample size for each variable is the number of non-missing observations for that variable),
+\code{"average"} (sample size is the average number of non-missing observations across all variables),
+\code{"max"} (sample size is the maximum number of non-missing observations across all variables),
+\code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
 
-\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.}
+\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
+\code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
+\code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.}
 
 \item{k}{Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be \code{k = 2}.}
 
@@ -43,8 +49,33 @@ A list with the following elements:
 }
 }
 \description{
-Title
+Stepwise Multiple Regression Search based on Information Criteria
 }
 \examples{
-# LATER
+# For full data using AIC
+# First variable of the data set as dependent variable
+result <- regression_opt(
+  data = mantar_dummy_full,
+  dep_ind = 1,
+  k = "2"
+)
+
+# View regression coefficients and R-squared
+result$regression
+result$R2
+
+# For data with missingess using BIC
+# Second variable of the data set as dependent variable
+# Using individual sample size of the dependent variable and stacked Multiple Imputation
+
+result_mis <- regression_opt(
+ data = mantar_dummy_mis,
+ dep_ind = 2,
+ n_calc = "individual",
+ missing_handling = "stacked-mi",
+ )
+
+ # View regression coefficients and R-squared
+ result_mis$regression
+ result_mis$R2
 }
