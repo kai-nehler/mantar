@@ -6,7 +6,7 @@
 #' Must be provided if a correlation matrix (`mat`) is supplied instead of raw data.
 #' @param mat Optional covariance or correlation matrix for the variables to be included in the network.
 #' Used only if \code{data} is \code{NULL}.
-#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
+#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
 #' @param n_calc Method for calculating the sample size for node-wise regression models. Can be one of:
 #' `"individual"` (sample size for each variable is the number of non-missing observations for that variable),
 #' `"average"` (sample size is the average number of non-missing observations across all variables),
@@ -19,6 +19,26 @@
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
 #' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
+#'
+#' @details
+#' This function estimates a network structure using neighborhood selection guided by information criteria.
+#' Simulations by Williams et al. (2019) indicated that using the `"and"` rule for merging regression weights tends to yield more accurate partial correlation estimates than the `"or"` rule.
+#' Both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) are supported and have been shown to produce valid network structures.
+#'
+#' To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
+#' According to simulations by Nehler and Schultze (2024), stacked multiple imputation performs reliably across a range of sample sizes.
+#' In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity—but may still be preferred in such cases due to its much faster runtime.
+#'
+#' Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
+#' During imputation, all variables are imputed using predictive mean matching (see e.g., van Buuren, 2018), with all other variables in the data set used as predictors.
+#'
+#' @references
+#' Nehler, K. J., & Schultze, M. (2024). *Handling missing values when using neighborhood selection for network analysis*. https://doi.org/10.31234/osf.io/qpj35
+#'
+#' van Buuren, S. (2018). *Flexible Imputation of Missing Data* (2nd ed.). CRC Press.
+#'
+#' Williams, D. R., Rhemtulla, M., Wysocki, A. C., & Rast, P. (2019). On nonregularized estimation of psychological networks. *Multivariate Behavioral Research, 54*(5), 719–750. https://doi.org/10.1080/00273171.2019.1575716
+
 #'
 #' @return A list with the following elements:
 #' \describe{

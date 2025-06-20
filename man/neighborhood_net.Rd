@@ -35,7 +35,7 @@ Used only if \code{data} is \code{NULL}.}
 \code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
 \code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.}
 
-\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default log(n) (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
+\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
 
@@ -52,6 +52,18 @@ A list with the following elements:
 }
 \description{
 Estimate Network using Neighborhood Selection based on Information Criteria
+}
+\details{
+This function estimates a network structure using neighborhood selection guided by information criteria.
+Simulations by Williams et al. (2019) indicated that using the \code{"and"} rule for merging regression weights tends to yield more accurate partial correlation estimates than the \code{"or"} rule.
+Both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) are supported and have been shown to produce valid network structures.
+
+To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
+According to simulations by Nehler and Schultze (2024), stacked multiple imputation performs reliably across a range of sample sizes.
+In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity—but may still be preferred in such cases due to its much faster runtime.
+
+Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
+During imputation, all variables are imputed using predictive mean matching (see e.g., van Buuren, 2018), with all other variables in the data set used as predictors.
 }
 \examples{
 # Estimate network from full data set
@@ -70,4 +82,11 @@ missing_handling = "two-step-em")
 
 # View estimated partial correlations
 result_mis$pcor
+}
+\references{
+Nehler, K. J., & Schultze, M. (2024). \emph{Handling missing values when using neighborhood selection for network analysis}. https://doi.org/10.31234/osf.io/qpj35
+
+van Buuren, S. (2018). \emph{Flexible Imputation of Missing Data} (2nd ed.). CRC Press.
+
+Williams, D. R., Rhemtulla, M., Wysocki, A. C., & Rast, P. (2019). On nonregularized estimation of psychological networks. \emph{Multivariate Behavioral Research, 54}(5), 719–750. https://doi.org/10.1080/00273171.2019.1575716
 }
