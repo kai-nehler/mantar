@@ -21,11 +21,234 @@ You can install the development version of mantar from
 pak::pak("kai-nehler/mantar")
 ```
 
+After installation the easiest way to get an overview of functions and
+capabilities is to use `?mantar` to open the package help-file. You
+could also read the rest of this README for an introduction and some
+examples.
+
+## Features
+
+As already described, the package currently focuses on network
+estimation using **neighborhood selection** with **information
+criteria** for model selection in node-wise regressions. This
+functionality is available for both complete and incomplete data.
+
+For datasets with missing values, two approaches are implemented:
+
+- **Two-step Expectation-Maximization (EM):** A fast method that
+  estimates the correlation matrix via an EM algorithm using the
+  `lavaan` package. It performs well when the sample size is very large
+  relative to the amount of missingness and the complexity of the
+  network.
+- **Stacked Multiple Imputation (MI):** A more robust approach across a
+  wider range of sample sizes. Multiple imputation is performed using
+  predictive mean matching (PMM) with the `mice` package. The imputed
+  data sets are stacked into a single data set, and a correlation matrix
+  is estimated from this combined data.
+
+Both methods produce a correlation matrix that is then used to estimate
+the network via node-wise regressions.
+
+In addition to full network estimation, the package also supports
+**stepwise regression search** based on information criteria for a
+**single dependent variable**. This regression search is available for
+both complete and incomplete data and relies on the same two-step EM or
+stacked MI procedures to handle missing values as the network analysis.
+While both methods to handle missingness are expected to perform well in
+this context, no specific simulation study has been conducted to compare
+their effectiveness for single regression modeling, and thus their
+relative strengths remain an open question.
+
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+The package includes two dummy datasets that resemble a typical
+psychological dataset, where the number of observations is considerably
+larger than the number of variables. Although the variables have
+descriptive names, these are included solely to make the examples more
+engaging - the data themselves are **fully synthetic**. -
+`mantar_dummy_full`: Fully observed data (no missing values) -
+`mantar_dummy_mis`: Data with missing values
+
+These data sets are intended for examples and testing only.
 
 ``` r
 library(mantar)
-## basic example code
+
+# Load example data
+data(mantar_dummy_full)
+data(mantar_dummy_mis)
+
+# Preview the first few rows
+head(mantar_dummy_full)
+#>   Emotional reactivity Tendency toward worry Sensitivity to stress
+#> 1          -0.08824641            -0.2659269            -1.2036137
+#> 2          -0.44657803            -0.4588384            -0.2431794
+#> 3          -1.06934325            -1.5050242            -0.8986388
+#> 4           0.58282029            -0.5036316            -1.6020000
+#> 5           0.58791759             0.5972580            -0.5882332
+#> 6           0.10224725             0.1494428            -1.0877812
+#>   Self-awareness  Moodiness Cautiousness Thoughtfulness about future challenges
+#> 1     -2.3499259  0.6693700   0.04102854                              0.6484939
+#> 2     -0.1656722 -0.3361568   0.88919849                              0.2949630
+#> 3     -1.0857552  0.2249633   0.77060142                             -1.3519007
+#> 4      1.0820676 -0.1858346  -0.03462852                             -0.4702988
+#> 5      1.7461103  0.7160714   1.58280444                              0.9503597
+#> 6     -1.7886107  1.3522197  -0.25494638                             -0.8938618
+#>   Responsiveness to criticism
+#> 1                 -0.77992262
+#> 2                 -0.91747608
+#> 3                  0.56000763
+#> 4                  0.34653985
+#> 5                  0.82981174
+#> 6                 -0.01593388
+head(mantar_dummy_mis)
+#>   Emotional reactivity Tendency toward worry Sensitivity to stress
+#> 1                   NA            -0.4376210            -0.5774722
+#> 2           -1.7551688            -0.7039623             0.9070330
+#> 3            2.0493638                    NA                    NA
+#> 4                   NA                    NA                    NA
+#> 5           -0.6338512             0.4361078            -0.5564631
+#> 6            0.1054382             0.6935808             2.6557231
+#>   Self-awareness  Moodiness Cautiousness Thoughtfulness about future challenges
+#> 1     0.22292188  0.6614044           NA                              0.7710993
+#> 2     0.03418623  0.6140406   0.83879818                             -1.5588119
+#> 3             NA -0.8872971   0.04830719                                     NA
+#> 4    -1.24779117 -0.7298623  -0.62263184                             -0.7100126
+#> 5    -0.01032403         NA  -0.09690612                              1.0583312
+#> 6             NA         NA  -0.04358574                                     NA
+#>   Responsiveness to criticism
+#> 1                  0.37233355
+#> 2                 -0.55079199
+#> 3                 -0.90103222
+#> 4                  0.80773402
+#> 5                  0.20820252
+#> 6                 -0.03915726
+```
+
+The main function for estimating a network is `neighborhood_net()`. In
+the case of fully observed data, the function takes the dataset as input
+and estimates a network structure using **neighborhood selection**
+guided by **information criteria**. With default arguments, only the
+dataset needs to be provided.
+
+#### Information Criteria
+
+The `k` argument controls the penalty used in model selection for
+node-wise regressions. It reflects the penalty per parameter (i.e.,
+number of predictors + 1):
+
+- `k = "log(n)"` (default): corresponds to the **Bayesian Information
+  Criterion (BIC)**
+- `k = "2"`: corresponds to the **Akaike Information Criterion (AIC)**
+
+#### Estimation of Partial Correlation
+
+The `pcor_merge_rule` argument determines how partial correlations are
+estimated based on the regression results between two nodes:
+
+- `"and"` (default): a partial correlation is estimated **only if both**
+  regression weights (from node A to B and from B to A) are non-zero.
+- `"or"`: a partial correlation is estimated if **at least one** of the
+  two regression weights is non-zero.
+
+Although both options are available, current simulation evidence
+suggests that the `"and"` rule yields more accurate partial correlation
+estimates than the `"or"` rule. Therefore, changing this default is
+**not recommended** unless you have a specific reason.
+
+### Example of Network Estimation without Missing Data
+
+``` r
+# Estimate network from full data set using BIC and and rule
+result <- neighborhood_net(data = mantar_dummy_full, 
+                           k = "log(n)", 
+                           pcor_merge_rule = "and")
+#> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
+# View estimated partial correlations
+result$pcor
+#>           [,1]      [,2]     [,3]      [,4]      [,5]      [,6]      [,7]
+#> [1,] 0.0000000 0.2617524 0.130019 0.0000000 0.0000000 0.0000000 0.0000000
+#> [2,] 0.2617524 0.0000000 0.000000 0.2431947 0.0000000 0.0000000 0.2595917
+#> [3,] 0.1300190 0.0000000 0.000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [4,] 0.0000000 0.2431947 0.000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [5,] 0.0000000 0.0000000 0.000000 0.0000000 0.0000000 0.4377322 0.0000000
+#> [6,] 0.0000000 0.0000000 0.000000 0.0000000 0.4377322 0.0000000 0.0000000
+#> [7,] 0.0000000 0.2595917 0.000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [8,] 0.0000000 0.0000000 0.000000 0.0000000 0.2762595 0.2523658 0.0000000
+#>           [,8]
+#> [1,] 0.0000000
+#> [2,] 0.0000000
+#> [3,] 0.0000000
+#> [4,] 0.0000000
+#> [5,] 0.2762595
+#> [6,] 0.2523658
+#> [7,] 0.0000000
+#> [8,] 0.0000000
+```
+
+In the case of missing data, the `neighborhood_net()` function offers
+several additional arguments that control how sample size and
+missingness are handled.
+
+#### Calculation of Sample Size
+
+The `n_calc` argument specifies how the sample size is calculated for
+each node-wise regression. This affects the penalty term used in model
+selection.
+
+The available options are:
+
+- `"individual"` *(default)*: Uses the number of non-missing
+  observations for each individual variable. This is the recommended
+  approach.
+- `"average"`: Uses the average number of non-missing observations
+  across all variables.
+- `"max"`: Uses the maximum number of non-missing observations across
+  all variables.
+- `"total"`: Uses the total number of observations in the dataset (i.e.,
+  the number of rows).
+
+#### Handling Missing Data
+
+The `missing_handling` argument specifies how the correlation matrix is
+estimated when the input data contains missing values. Two approaches
+are supported:
+
+- `"two-step-em"`: Applies a classic **Expectation-Maximization (EM)**
+  algorithm to estimate the covariance matrix.
+- `"stacked-mi"`: Applies **multiple imputation** to create several
+  completed datasets, which are then stacked into a single dataset. A
+  correlation matrix is computed from this stacked data.
+
+If `"stacked-mi"` is used, the `nimp` argument controls the number of
+imputations (default: `20`).
+
+### Example of Network Estimation with Missing Data
+
+``` r
+# Estimate network for data set with missing values
+result_mis <- neighborhood_net(data = mantar_dummy_mis, 
+                                n_calc = "individual", 
+                                missing_handling = "two-step-em", 
+                                pcor_merge_rule = "and")
+# View estimated partial correlations
+result_mis$pcor
+#>           [,1]      [,2]      [,3]      [,4]      [,5]      [,6]      [,7]
+#> [1,] 0.0000000 0.1308241 0.2319812 0.0000000 0.0000000 0.0000000 0.1529808
+#> [2,] 0.1308241 0.0000000 0.0000000 0.2609684 0.0000000 0.0000000 0.3022411
+#> [3,] 0.2319812 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [4,] 0.0000000 0.2609684 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [5,] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.4805308 0.0000000
+#> [6,] 0.0000000 0.0000000 0.0000000 0.0000000 0.4805308 0.0000000 0.0000000
+#> [7,] 0.1529808 0.3022411 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
+#> [8,] 0.0000000 0.0000000 0.0000000 0.3014538 0.2043425 0.2064012 0.0000000
+#>           [,8]
+#> [1,] 0.0000000
+#> [2,] 0.0000000
+#> [3,] 0.0000000
+#> [4,] 0.3014538
+#> [5,] 0.2043425
+#> [6,] 0.2064012
+#> [7,] 0.0000000
+#> [8,] 0.0000000
 ```
