@@ -49,15 +49,10 @@ print.summary.mantar_network <- function(x, ...) {
     cat(sprintf("The penalty term was %s and the '%s' rule was used for edge inclusion.\n\n", k, pcor_rule))
   }
 
-  ns <- x$ns
+  cat("The sample sizes used for the nodewise regressions were as follows:\n")
+  ns_named <- stats::setNames(x$ns, x$varnames)
+  print(ns_named)
 
-  if (length(unique(ns)) == 1) {
-    cat(sprintf("The sample size used for every nodewise regression was %d.\n", ns[1]))
-  } else {
-    cat("The sample sizes used for the nodewise regressions were as follows:\n")
-    ns_named <- stats::setNames(ns, x$varnames)
-    print(ns_named)
-  }
 
   invisible(x)
 }
