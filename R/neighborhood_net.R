@@ -71,7 +71,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
                              k = "log(n)", nimp = 20, pcor_merge_rule = "and"){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
-  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi"))
+  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
 
   # Check: Which input is provided?

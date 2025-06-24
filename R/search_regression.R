@@ -61,7 +61,7 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
                            k = "log(n)", nimp = 20) {
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
-  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi"))
+  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
