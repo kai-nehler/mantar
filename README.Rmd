@@ -92,6 +92,7 @@ result <- neighborhood_net(data = mantar_dummy_full,
                            pcor_merge_rule = "and")
 # View estimated partial correlations
 result
+result$args
 ```
 
 

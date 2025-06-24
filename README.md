@@ -190,6 +190,18 @@ result
 #> [6,] 0.2523658
 #> [7,] 0.0000000
 #> [8,] 0.0000000
+result$args
+#> $pcor_merge_rule
+#> [1] "and"
+#> 
+#> $k
+#> [1] "log(n)"
+#> 
+#> $missing_handling
+#> NULL
+#> 
+#> $nimp
+#> NULL
 ```
 
 In the case of missing data, the `neighborhood_net()` function offers
