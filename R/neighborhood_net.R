@@ -165,6 +165,7 @@ neighborhood_sel <- function(mat, ns, k, pcor_merge_rule){
 
   p <- ncol(mat)                      # number of variables
   beta_mat <- matrix(NA, p, p)        # initialize matrix for regression coefficients
+  colnames(beta_mat) <- rownames(beta_mat) <- colnames(mat)
 
   # calculate sample size for each variable
 
@@ -202,6 +203,8 @@ compute_partials <- function(betas, rule){
   wadj <- sign(betas) * sqrt(Dummy) # add the corresponding sign to the partial correlation
   wadj[is.na(wadj)] <- 0 # replace NA with 0
   adj <- ifelse(wadj == 0, 0, 1)
+
+  colnames(wadj) <- rownames(wadj) <- colnames(adj) <- rownames(adj) <- colnames(betas)
 
   return(list(wadj = wadj, adj = adj))
 }
