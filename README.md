@@ -200,8 +200,6 @@ sum_result
 #> and the 'and' rule for the inclusion of edges based on a full data set.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
-#>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
-#> [1,]  400  400  400  400  400  400  400  400
 ```
 
 In the case of missing data, the `neighborhood_net()` function offers
@@ -272,7 +270,7 @@ result_mis
 
 # Create and view a summary of the network estimation
 sum_result_mis <- summary(result_mis)
-sum_result_mis
+sum_result_mis 
 #> The density of the estimated network is 0.321
 #> 
 #> Network was estimated using neighborhood selection on data with missing values.
@@ -280,6 +278,4 @@ sum_result_mis
 #> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
-#>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
-#> [1,]  420  420  420  420  420  420  420  420
 ```

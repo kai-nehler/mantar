@@ -134,5 +134,5 @@ result_mis
 
 # Create and view a summary of the network estimation
 sum_result_mis <- summary(result_mis)
-sum_result_mis
+sum_result_mis 
 ```

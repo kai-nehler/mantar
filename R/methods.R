@@ -50,9 +50,8 @@ print.summary.mantar_network <- function(x, ...) {
   }
 
   cat("The sample sizes used for the nodewise regressions were as follows:\n")
-  ns_named <- matrix(x$ns, nrow = 1)
-  colnames(ns_named) <- x$varnames
-  print(ns_named)
+  ns_named <- stats::setNames(x$ns, x$varnames)
+  ns_named
 
 
   invisible(x)
