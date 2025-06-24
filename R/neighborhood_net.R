@@ -137,7 +137,14 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
 
   mod <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = pcor_merge_rule)
 
-  return(list(pcor = mod$partials, betas = mod$beta_mat))
+  result <- list(
+    pcor = mod$partials,
+    betas = mod$beta_mat
+  )
+
+  class(result) <- c("mantar_network")
+  return(result)
+
 }
 
 

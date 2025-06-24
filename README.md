@@ -171,7 +171,7 @@ result <- neighborhood_net(data = mantar_dummy_full,
                            pcor_merge_rule = "and")
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
-result$pcor
+result
 #>           [,1]      [,2]     [,3]      [,4]      [,5]      [,6]      [,7]
 #> [1,] 0.0000000 0.2617524 0.130019 0.0000000 0.0000000 0.0000000 0.0000000
 #> [2,] 0.2617524 0.0000000 0.000000 0.2431947 0.0000000 0.0000000 0.2595917
@@ -238,7 +238,7 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 missing_handling = "two-step-em", 
                                 pcor_merge_rule = "and")
 # View estimated partial correlations
-result_mis$pcor
+result_mis
 #>           [,1]      [,2]      [,3]      [,4]      [,5]      [,6]      [,7]
 #> [1,] 0.0000000 0.1308241 0.2319812 0.0000000 0.0000000 0.0000000 0.1529808
 #> [2,] 0.1308241 0.0000000 0.0000000 0.2609684 0.0000000 0.0000000 0.3022411

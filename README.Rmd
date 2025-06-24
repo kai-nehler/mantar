@@ -91,7 +91,7 @@ result <- neighborhood_net(data = mantar_dummy_full,
                            k = "log(n)", 
                            pcor_merge_rule = "and")
 # View estimated partial correlations
-result$pcor
+result
 ```
 
 
@@ -126,5 +126,5 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 missing_handling = "two-step-em", 
                                 pcor_merge_rule = "and")
 # View estimated partial correlations
-result_mis$pcor
+result_mis
 ```
