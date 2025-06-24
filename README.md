@@ -190,18 +190,16 @@ result
 #> [6,] 0.2523658
 #> [7,] 0.0000000
 #> [8,] 0.0000000
-result$args
-#> $pcor_merge_rule
-#> [1] "and"
+
+# Create and view a summary of the network estimation
+sum_result <- summary(result)
+sum_result
+#> The density of the estimated network is 0.250
 #> 
-#> $k
-#> [1] "log(n)"
+#> Network was estimated using neighborhood selection with a penalty term of log(n)
+#> and the 'and' rule for the inclusion of edges based on a full data set.
 #> 
-#> $missing_handling
-#> NULL
-#> 
-#> $nimp
-#> NULL
+#> The sample size used for every nodewise regression was 400.
 ```
 
 In the case of missing data, the `neighborhood_net()` function offers
@@ -269,16 +267,15 @@ result_mis
 #> [6,] 0.2064012
 #> [7,] 0.0000000
 #> [8,] 0.0000000
-result_mis$args
-#> $pcor_merge_rule
-#> [1] "and"
+
+# Create and view a summary of the network estimation
+sum_result_mis <- summary(result_mis)
+sum_result_mis
+#> The density of the estimated network is 0.321
 #> 
-#> $k
-#> [1] "log(n)"
+#> Network was estimated using neighborhood selection on data with missing values.
+#> Missing data were handled using 'two-step-em'.
+#> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
 #> 
-#> $missing_handling
-#> [1] "two-step-em"
-#> 
-#> $nimp
-#> [1] 20
+#> The sample size used for every nodewise regression was 420.
 ```

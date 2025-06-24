@@ -94,6 +94,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
                                                          estimator = "ML", output = "fit")))
         if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
         mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
+        nimp <- NULL
 
       } else if (missing_handling == "stacked-mi"){
 
@@ -114,8 +115,10 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
 
       } else if (missing_handling == "pairwise"){
         mat <- stats::cor(data, use = "pairwise.complete.obs")
+        nimp <- NULL
       } else if (missing_handling == "listwise"){
         mat <- stats::cor(data, use = "complete.obs")
+        nimp <- NULL
       }
     } else {
       mat <- stats::cor(data)

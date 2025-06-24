@@ -92,7 +92,10 @@ result <- neighborhood_net(data = mantar_dummy_full,
                            pcor_merge_rule = "and")
 # View estimated partial correlations
 result
-result$args
+
+# Create and view a summary of the network estimation
+sum_result <- summary(result)
+sum_result
 ```
 
 
@@ -128,5 +131,8 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 pcor_merge_rule = "and")
 # View estimated partial correlations
 result_mis
-result_mis$args
+
+# Create and view a summary of the network estimation
+sum_result_mis <- summary(result_mis)
+sum_result_mis
 ```
