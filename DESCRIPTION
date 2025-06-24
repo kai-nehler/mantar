@@ -12,6 +12,7 @@ Imports:
 Suggests:
     mice,
     lavaan,
+    qgraph,
     testthat (>= 3.0.0)
 LazyData: true
 Encoding: UTF-8

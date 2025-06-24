@@ -57,3 +57,16 @@ print.summary.mantar_network <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
+plot.mantar_network <- function(x, layout = "spring", ...) {
+  if (!requireNamespace("qgraph", quietly = TRUE)) {
+    stop(
+      "The 'qgraph' package must be installed to plot a mantar_network object.\n",
+      "You can install it with: install.packages('qgraph')"
+    )
+  }
+
+  # Call qgraph::qgraph using the partial correlation matrix and user arguments
+  qgraph::qgraph(x$pcor, layout = layout, ...)
+}
+
