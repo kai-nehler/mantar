@@ -119,6 +119,8 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
       }
     } else {
       mat <- stats::cor(data)
+      missing_handling <- NULL
+      nimp <- NULL
     }
 
     if (is.null(ns)){
@@ -139,7 +141,10 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
 
   result <- list(
     pcor = mod$partials,
-    betas = mod$beta_mat
+    betas = mod$beta_mat,
+    ns = ns,
+    args = list(pcor_merge_rule = pcor_merge_rule, k = k,
+                missing_handling = missing_handling, nimp = nimp)
   )
 
   class(result) <- c("mantar_network")

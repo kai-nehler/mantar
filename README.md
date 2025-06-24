@@ -257,4 +257,16 @@ result_mis
 #> [6,] 0.2064012
 #> [7,] 0.0000000
 #> [8,] 0.0000000
+result_mis$args
+#> $pcor_merge_rule
+#> [1] "and"
+#> 
+#> $k
+#> [1] "log(n)"
+#> 
+#> $missing_handling
+#> [1] "two-step-em"
+#> 
+#> $nimp
+#> [1] 20
 ```

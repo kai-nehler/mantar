@@ -4,7 +4,7 @@ test_that("neighborhood_net() works with complete data and default arguments", {
 
   # Check return type
   expect_type(result, "list")
-  expect_named(result, c("pcor", "betas"))
+  expect_named(result, c("pcor", "betas", "ns", "args"))
 
   # Check matrix dimensions
   expect_true(is.matrix(result$pcor))
