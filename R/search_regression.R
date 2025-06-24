@@ -15,6 +15,8 @@
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
 #' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
 #' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
+#' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
+#' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
 #' @param k Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be `k = 2`.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #'
@@ -118,6 +120,10 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
         stacked_data <- mice::complete(imputed_data, c(1:nimp))
         colnames(stacked_data) <- original_names  # restore original column names
         mat <- stats::cor(stacked_data)
+      } else if (missing_handling == "pairwise"){
+        mat <- stats::cor(data, use = "pairwise.complete.obs")
+      } else if (missing_handling == "listwise"){
+        mat <- stats::cor(data, use = "complete.obs")
       }
     } else {
       mat <- stats::cor(data)

@@ -33,7 +33,8 @@ estimation using **neighborhood selection** with **information
 criteria** for model selection in node-wise regressions. This
 functionality is available for both complete and incomplete data.
 
-For datasets with missing values, two approaches are implemented:
+For datasets with missing values, two modern missing approaches are
+implemented:
 
 - **Two-step Expectation-Maximization (EM):** A fast method that
   estimates the correlation matrix via an EM algorithm using the
@@ -47,12 +48,16 @@ For datasets with missing values, two approaches are implemented:
   is estimated from this combined data.
 
 Both methods produce a correlation matrix that is then used to estimate
-the network via node-wise regressions.
+the network via node-wise regressions. It is also possible to compute
+the correlation matrix using pairwise or listwise deletion. However,
+these methods are generally not recommended, except in specific cases,
+such as when data are missing completely at random and the proportion of
+missingness is very small.
 
-In addition to full network estimation, the package also supports
-**stepwise regression search** based on information criteria for a
-**single dependent variable**. This regression search is available for
-both complete and incomplete data and relies on the same two-step EM or
+In addition to network estimation, the package also supports **stepwise
+regression search** based on information criteria for a **single
+dependent variable**. This regression search is available for both
+complete and incomplete data and relies on the same two-step EM or
 stacked MI procedures to handle missing values as the network analysis.
 While both methods to handle missingness are expected to perform well in
 this context, no specific simulation study has been conducted to compare
@@ -65,9 +70,10 @@ The package includes two dummy datasets that resemble a typical
 psychological dataset, where the number of observations is considerably
 larger than the number of variables. Although the variables have
 descriptive names, these are included solely to make the examples more
-engaging - the data themselves are **fully synthetic**. -
-`mantar_dummy_full`: Fully observed data (no missing values) -
-`mantar_dummy_mis`: Data with missing values
+engaging - the data themselves are **fully synthetic**.
+
+- `mantar_dummy_full`: Fully observed data (no missing values)
+- `mantar_dummy_mis`: Data with missing values
 
 These data sets are intended for examples and testing only.
 

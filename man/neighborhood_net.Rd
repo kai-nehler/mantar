@@ -33,7 +33,9 @@ Used only if \code{data} is \code{NULL}.}
 
 \item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
 \code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
-\code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.}
+\code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.
+\code{"pairwise"} uses pairwise deletion to estimate the covariance matrix from the data.
+\code{"listwise"} uses listwise deletion to estimate the covariance matrix from the data.}
 
 \item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 

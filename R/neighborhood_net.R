@@ -15,6 +15,8 @@
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
 #' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
 #' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
+#' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
+#' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
@@ -110,6 +112,10 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
         colnames(stacked_data) <- original_names  # restore original column names
         mat <- stats::cor(stacked_data)
 
+      } else if (missing_handling == "pairwise"){
+        mat <- stats::cor(data, use = "pairwise.complete.obs")
+      } else if (missing_handling == "listwise"){
+        mat <- stats::cor(data, use = "complete.obs")
       }
     } else {
       mat <- stats::cor(data)
