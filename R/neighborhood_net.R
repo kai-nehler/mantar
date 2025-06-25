@@ -114,14 +114,14 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
         mat <- stats::cor(stacked_data)
 
       } else if (missing_handling == "pairwise"){
-        mat <- stats::cor(data, use = "pairwise.complete.obs")
+        mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
         nimp <- NULL
       } else if (missing_handling == "listwise"){
-        mat <- stats::cor(data, use = "complete.obs")
+        mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
         nimp <- NULL
       }
     } else {
-      mat <- stats::cor(data)
+      mat <- stats::cov2cor(stats::cov(data))
       missing_handling <- NULL
       nimp <- NULL
     }
