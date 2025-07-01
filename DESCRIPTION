@@ -4,7 +4,7 @@ Version: 0.0.0.9000
 Authors@R: 
     person("Kai Jannik", "Nehler", , "nehler@psych.uni-frankfurt.de", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3764-761X"))
-Description: This package provides functionality for estimating network structures while accounting for missing values in the data.
+Description: Functionality for estimating network structures while accounting for missing values in the data.
 License: GPL (>= 3)
 Depends: R (>= 4.1.0)
 Imports: 
