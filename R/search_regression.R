@@ -51,7 +51,7 @@
 #'  data = mantar_dummy_mis,
 #'  dep_ind = 2,
 #'  n_calc = "individual",
-#'  missing_handling = "stacked-mi",
+#'  missing_handling = "two-step-em",
 #'  )
 #'
 #'  # View regression coefficients and R-squared
@@ -59,7 +59,7 @@
 #'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
                            n_calc = "individual",
-                           missing_handling = "two-step-em",
+                           missing_handling = "stacked-mi",
                            k = "log(n)", nimp = 20) {
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
