@@ -10,7 +10,7 @@ regression_opt(
   mat = NULL,
   dep_ind,
   n_calc = "individual",
-  missing_handling = "two-step-em",
+  missing_handling = "stacked-mi",
   k = "log(n)",
   nimp = 20
 )
@@ -76,7 +76,7 @@ result_mis <- regression_opt(
  data = mantar_dummy_mis,
  dep_ind = 2,
  n_calc = "individual",
- missing_handling = "stacked-mi",
+ missing_handling = "two-step-em",
  )
 
  # View regression coefficients and R-squared
