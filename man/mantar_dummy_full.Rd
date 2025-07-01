@@ -9,14 +9,14 @@
 \describe{
 \item{Both data frames}{8 columns; rows: 400 (\code{mantar_dummy_full}) and 600 (\code{mantar_dummy_mis})}
 \item{Columns}{\describe{
-\item{Emotional reactivity}{Tending to feel emotions strongly in response to life events.}
-\item{Tendency toward worry}{Being more likely to feel concerned or uneasy.}
-\item{Sensitivity to stress}{Feeling more stressed in challenging or uncertain situations.}
-\item{Self-awareness}{Being conscious of one’s own feelings and how they shift.}
+\item{EmoReactivity}{Tending to feel emotions strongly in response to life events.}
+\item{TendWorry}{Being more likely to feel concerned or uneasy.}
+\item{StressSens}{Feeling more stressed in challenging or uncertain situations.}
+\item{SelfAware}{Being conscious of one’s own feelings and how they shift.}
 \item{Moodiness}{Experiencing occasional changes in mood.}
-\item{Cautiousness}{Being careful and thinking ahead about possible negative outcomes.}
-\item{Thoughtfulness about future challenges}{Reflecting on what might go wrong and preparing for it.}
-\item{Responsiveness to criticism}{Being affected by others’ feedback or disapproval.}
+\item{Cautious}{Being careful and thinking ahead about possible negative outcomes.}
+\item{ThoughtFuture}{Reflecting on what might go wrong and preparing for it.}
+\item{RespCriticism}{Being affected by others’ feedback or disapproval.}
 }}
 }
 
