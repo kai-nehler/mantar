@@ -102,10 +102,10 @@ head(mantar_dummy_full)
 #> 6    -0.8938618   -0.01593388
 head(mantar_dummy_mis)
 #>   EmoReactivity  TendWorry StressSens   SelfAware  Moodiness    Cautious
-#> 1            NA -0.4376210 -0.5774722  0.22292188  0.6614044          NA
+#> 1    -1.7551632 -0.4376210 -0.5774722  0.10562820  0.6614044          NA
 #> 2    -1.7551688 -0.7039623  0.9070330  0.03418623  0.6140406  0.83879818
 #> 3     2.0493638         NA         NA          NA -0.8872971  0.04830719
-#> 4            NA         NA         NA -1.24779117 -0.7298623 -0.62263184
+#> 4     0.1056282         NA         NA -1.24779117 -0.7298623 -0.62263184
 #> 5    -0.6338512  0.4361078 -0.5564631 -0.01032403         NA -0.09690612
 #> 6     0.1054382  0.6935808  2.6557231          NA         NA -0.04358574
 #>   ThoughtFuture RespCriticism
@@ -240,21 +240,21 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
 # View estimated partial correlations
 result_mis
 #>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
-#> EmoReactivity     0.0000000 0.1308241  0.2319812 0.0000000 0.0000000 0.0000000
-#> TendWorry         0.1308241 0.0000000  0.0000000 0.2609684 0.0000000 0.0000000
-#> StressSens        0.2319812 0.0000000  0.0000000 0.0000000 0.0000000 0.0000000
-#> SelfAware         0.0000000 0.2609684  0.0000000 0.0000000 0.0000000 0.0000000
-#> Moodiness         0.0000000 0.0000000  0.0000000 0.0000000 0.0000000 0.4805308
-#> Cautious          0.0000000 0.0000000  0.0000000 0.0000000 0.4805308 0.0000000
-#> ThoughtFuture     0.1529808 0.3022411  0.0000000 0.0000000 0.0000000 0.0000000
-#> RespCriticism     0.0000000 0.0000000  0.0000000 0.3014538 0.2043425 0.2064012
+#> EmoReactivity     0.0000000 0.1295824   0.230612 0.0000000 0.0000000 0.0000000
+#> TendWorry         0.1295824 0.0000000   0.000000 0.2515697 0.0000000 0.0000000
+#> StressSens        0.2306120 0.0000000   0.000000 0.0000000 0.0000000 0.0000000
+#> SelfAware         0.0000000 0.2515697   0.000000 0.0000000 0.0000000 0.0000000
+#> Moodiness         0.0000000 0.0000000   0.000000 0.0000000 0.0000000 0.4768098
+#> Cautious          0.0000000 0.0000000   0.000000 0.0000000 0.4768098 0.0000000
+#> ThoughtFuture     0.1446363 0.2991518   0.000000 0.0000000 0.0000000 0.0000000
+#> RespCriticism     0.0000000 0.0000000   0.000000 0.3008107 0.1930326 0.2210164
 #>               ThoughtFuture RespCriticism
-#> EmoReactivity     0.1529808     0.0000000
-#> TendWorry         0.3022411     0.0000000
+#> EmoReactivity     0.1446363     0.0000000
+#> TendWorry         0.2991518     0.0000000
 #> StressSens        0.0000000     0.0000000
-#> SelfAware         0.0000000     0.3014538
-#> Moodiness         0.0000000     0.2043425
-#> Cautious          0.0000000     0.2064012
+#> SelfAware         0.0000000     0.3008107
+#> Moodiness         0.0000000     0.1930326
+#> Cautious          0.0000000     0.2210164
 #> ThoughtFuture     0.0000000     0.0000000
 #> RespCriticism     0.0000000     0.0000000
 
@@ -269,7 +269,7 @@ sum_result_mis
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
 #> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
-#>           420           420           420           420           420 
+#>           427           426           425           428           424 
 #>      Cautious ThoughtFuture RespCriticism 
-#>           420           420           420
+#>           423           422           420
 ```
