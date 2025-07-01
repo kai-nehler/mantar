@@ -50,6 +50,8 @@ A list with the following elements:
 \describe{
 \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 \item{betas}{Matrix of regression coefficients from the final regression models.}
+\item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+\item{args}{List of arguments used in the function call, including \code{pcor_merge_rule}, \code{k}, \code{missing_handling}, and \code{nimp}.}
 }
 }
 \description{

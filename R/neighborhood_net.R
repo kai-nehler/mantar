@@ -46,6 +46,8 @@
 #' \describe{
 #'   \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 #'   \item{betas}{Matrix of regression coefficients from the final regression models.}
+#'   \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+#'   \item{args}{List of arguments used in the function call, including `pcor_merge_rule`, `k`, `missing_handling`, and `nimp`.}
 #' }
 #' @export
 #'
@@ -138,6 +140,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     }
     checker(ns = ns, mat = mat)
     mat <- stats::cov2cor(mat)
+    nimp <- missing_handling <- NULL
   }
 
   mod <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = pcor_merge_rule)
