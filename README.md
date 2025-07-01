@@ -86,49 +86,35 @@ data(mantar_dummy_mis)
 
 # Preview the first few rows
 head(mantar_dummy_full)
-#>   Emotional reactivity Tendency toward worry Sensitivity to stress
-#> 1          -0.08824641            -0.2659269            -1.2036137
-#> 2          -0.44657803            -0.4588384            -0.2431794
-#> 3          -1.06934325            -1.5050242            -0.8986388
-#> 4           0.58282029            -0.5036316            -1.6020000
-#> 5           0.58791759             0.5972580            -0.5882332
-#> 6           0.10224725             0.1494428            -1.0877812
-#>   Self-awareness  Moodiness Cautiousness Thoughtfulness about future challenges
-#> 1     -2.3499259  0.6693700   0.04102854                              0.6484939
-#> 2     -0.1656722 -0.3361568   0.88919849                              0.2949630
-#> 3     -1.0857552  0.2249633   0.77060142                             -1.3519007
-#> 4      1.0820676 -0.1858346  -0.03462852                             -0.4702988
-#> 5      1.7461103  0.7160714   1.58280444                              0.9503597
-#> 6     -1.7886107  1.3522197  -0.25494638                             -0.8938618
-#>   Responsiveness to criticism
-#> 1                 -0.77992262
-#> 2                 -0.91747608
-#> 3                  0.56000763
-#> 4                  0.34653985
-#> 5                  0.82981174
-#> 6                 -0.01593388
+#>   EmoReactivity  TendWorry StressSens  SelfAware  Moodiness    Cautious
+#> 1   -0.08824641 -0.2659269 -1.2036137 -2.3499259  0.6693700  0.04102854
+#> 2   -0.44657803 -0.4588384 -0.2431794 -0.1656722 -0.3361568  0.88919849
+#> 3   -1.06934325 -1.5050242 -0.8986388 -1.0857552  0.2249633  0.77060142
+#> 4    0.58282029 -0.5036316 -1.6020000  1.0820676 -0.1858346 -0.03462852
+#> 5    0.58791759  0.5972580 -0.5882332  1.7461103  0.7160714  1.58280444
+#> 6    0.10224725  0.1494428 -1.0877812 -1.7886107  1.3522197 -0.25494638
+#>   ThoughtFuture RespCriticism
+#> 1     0.6484939   -0.77992262
+#> 2     0.2949630   -0.91747608
+#> 3    -1.3519007    0.56000763
+#> 4    -0.4702988    0.34653985
+#> 5     0.9503597    0.82981174
+#> 6    -0.8938618   -0.01593388
 head(mantar_dummy_mis)
-#>   Emotional reactivity Tendency toward worry Sensitivity to stress
-#> 1                   NA            -0.4376210            -0.5774722
-#> 2           -1.7551688            -0.7039623             0.9070330
-#> 3            2.0493638                    NA                    NA
-#> 4                   NA                    NA                    NA
-#> 5           -0.6338512             0.4361078            -0.5564631
-#> 6            0.1054382             0.6935808             2.6557231
-#>   Self-awareness  Moodiness Cautiousness Thoughtfulness about future challenges
-#> 1     0.22292188  0.6614044           NA                              0.7710993
-#> 2     0.03418623  0.6140406   0.83879818                             -1.5588119
-#> 3             NA -0.8872971   0.04830719                                     NA
-#> 4    -1.24779117 -0.7298623  -0.62263184                             -0.7100126
-#> 5    -0.01032403         NA  -0.09690612                              1.0583312
-#> 6             NA         NA  -0.04358574                                     NA
-#>   Responsiveness to criticism
-#> 1                  0.37233355
-#> 2                 -0.55079199
-#> 3                 -0.90103222
-#> 4                  0.80773402
-#> 5                  0.20820252
-#> 6                 -0.03915726
+#>   EmoReactivity  TendWorry StressSens   SelfAware  Moodiness    Cautious
+#> 1            NA -0.4376210 -0.5774722  0.22292188  0.6614044          NA
+#> 2    -1.7551688 -0.7039623  0.9070330  0.03418623  0.6140406  0.83879818
+#> 3     2.0493638         NA         NA          NA -0.8872971  0.04830719
+#> 4            NA         NA         NA -1.24779117 -0.7298623 -0.62263184
+#> 5    -0.6338512  0.4361078 -0.5564631 -0.01032403         NA -0.09690612
+#> 6     0.1054382  0.6935808  2.6557231          NA         NA -0.04358574
+#>   ThoughtFuture RespCriticism
+#> 1     0.7710993    0.37233355
+#> 2    -1.5588119   -0.55079199
+#> 3            NA   -0.90103222
+#> 4    -0.7100126    0.80773402
+#> 5     1.0583312    0.20820252
+#> 6            NA   -0.03915726
 ```
 
 The main function for estimating a network is `neighborhood_net()`. In
@@ -172,60 +158,24 @@ result <- neighborhood_net(data = mantar_dummy_full,
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
 result
-#>                                        Emotional reactivity
-#> Emotional reactivity                              0.0000000
-#> Tendency toward worry                             0.2617524
-#> Sensitivity to stress                             0.1300190
-#> Self-awareness                                    0.0000000
-#> Moodiness                                         0.0000000
-#> Cautiousness                                      0.0000000
-#> Thoughtfulness about future challenges            0.0000000
-#> Responsiveness to criticism                       0.0000000
-#>                                        Tendency toward worry
-#> Emotional reactivity                               0.2617524
-#> Tendency toward worry                              0.0000000
-#> Sensitivity to stress                              0.0000000
-#> Self-awareness                                     0.2431947
-#> Moodiness                                          0.0000000
-#> Cautiousness                                       0.0000000
-#> Thoughtfulness about future challenges             0.2595917
-#> Responsiveness to criticism                        0.0000000
-#>                                        Sensitivity to stress Self-awareness
-#> Emotional reactivity                                0.130019      0.0000000
-#> Tendency toward worry                               0.000000      0.2431947
-#> Sensitivity to stress                               0.000000      0.0000000
-#> Self-awareness                                      0.000000      0.0000000
-#> Moodiness                                           0.000000      0.0000000
-#> Cautiousness                                        0.000000      0.0000000
-#> Thoughtfulness about future challenges              0.000000      0.0000000
-#> Responsiveness to criticism                         0.000000      0.0000000
-#>                                        Moodiness Cautiousness
-#> Emotional reactivity                   0.0000000    0.0000000
-#> Tendency toward worry                  0.0000000    0.0000000
-#> Sensitivity to stress                  0.0000000    0.0000000
-#> Self-awareness                         0.0000000    0.0000000
-#> Moodiness                              0.0000000    0.4377322
-#> Cautiousness                           0.4377322    0.0000000
-#> Thoughtfulness about future challenges 0.0000000    0.0000000
-#> Responsiveness to criticism            0.2762595    0.2523658
-#>                                        Thoughtfulness about future challenges
-#> Emotional reactivity                                                0.0000000
-#> Tendency toward worry                                               0.2595917
-#> Sensitivity to stress                                               0.0000000
-#> Self-awareness                                                      0.0000000
-#> Moodiness                                                           0.0000000
-#> Cautiousness                                                        0.0000000
-#> Thoughtfulness about future challenges                              0.0000000
-#> Responsiveness to criticism                                         0.0000000
-#>                                        Responsiveness to criticism
-#> Emotional reactivity                                     0.0000000
-#> Tendency toward worry                                    0.0000000
-#> Sensitivity to stress                                    0.0000000
-#> Self-awareness                                           0.0000000
-#> Moodiness                                                0.2762595
-#> Cautiousness                                             0.2523658
-#> Thoughtfulness about future challenges                   0.0000000
-#> Responsiveness to criticism                              0.0000000
+#>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
+#> EmoReactivity     0.0000000 0.2617524   0.130019 0.0000000 0.0000000 0.0000000
+#> TendWorry         0.2617524 0.0000000   0.000000 0.2431947 0.0000000 0.0000000
+#> StressSens        0.1300190 0.0000000   0.000000 0.0000000 0.0000000 0.0000000
+#> SelfAware         0.0000000 0.2431947   0.000000 0.0000000 0.0000000 0.0000000
+#> Moodiness         0.0000000 0.0000000   0.000000 0.0000000 0.0000000 0.4377322
+#> Cautious          0.0000000 0.0000000   0.000000 0.0000000 0.4377322 0.0000000
+#> ThoughtFuture     0.0000000 0.2595917   0.000000 0.0000000 0.0000000 0.0000000
+#> RespCriticism     0.0000000 0.0000000   0.000000 0.0000000 0.2762595 0.2523658
+#>               ThoughtFuture RespCriticism
+#> EmoReactivity     0.0000000     0.0000000
+#> TendWorry         0.2595917     0.0000000
+#> StressSens        0.0000000     0.0000000
+#> SelfAware         0.0000000     0.0000000
+#> Moodiness         0.0000000     0.2762595
+#> Cautious          0.0000000     0.2523658
+#> ThoughtFuture     0.0000000     0.0000000
+#> RespCriticism     0.0000000     0.0000000
 
 # Create and view a summary of the network estimation
 sum_result <- summary(result)
@@ -236,14 +186,10 @@ sum_result
 #> and the 'and' rule for the inclusion of edges based on a full data set.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
-#>                   Emotional reactivity                  Tendency toward worry 
-#>                                    400                                    400 
-#>                  Sensitivity to stress                         Self-awareness 
-#>                                    400                                    400 
-#>                              Moodiness                           Cautiousness 
-#>                                    400                                    400 
-#> Thoughtfulness about future challenges            Responsiveness to criticism 
-#>                                    400                                    400
+#> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
+#>           400           400           400           400           400 
+#>      Cautious ThoughtFuture RespCriticism 
+#>           400           400           400
 ```
 
 In the case of missing data, the `neighborhood_net()` function offers
@@ -293,60 +239,24 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 pcor_merge_rule = "and")
 # View estimated partial correlations
 result_mis
-#>                                        Emotional reactivity
-#> Emotional reactivity                              0.0000000
-#> Tendency toward worry                             0.1308241
-#> Sensitivity to stress                             0.2319812
-#> Self-awareness                                    0.0000000
-#> Moodiness                                         0.0000000
-#> Cautiousness                                      0.0000000
-#> Thoughtfulness about future challenges            0.1529808
-#> Responsiveness to criticism                       0.0000000
-#>                                        Tendency toward worry
-#> Emotional reactivity                               0.1308241
-#> Tendency toward worry                              0.0000000
-#> Sensitivity to stress                              0.0000000
-#> Self-awareness                                     0.2609684
-#> Moodiness                                          0.0000000
-#> Cautiousness                                       0.0000000
-#> Thoughtfulness about future challenges             0.3022411
-#> Responsiveness to criticism                        0.0000000
-#>                                        Sensitivity to stress Self-awareness
-#> Emotional reactivity                               0.2319812      0.0000000
-#> Tendency toward worry                              0.0000000      0.2609684
-#> Sensitivity to stress                              0.0000000      0.0000000
-#> Self-awareness                                     0.0000000      0.0000000
-#> Moodiness                                          0.0000000      0.0000000
-#> Cautiousness                                       0.0000000      0.0000000
-#> Thoughtfulness about future challenges             0.0000000      0.0000000
-#> Responsiveness to criticism                        0.0000000      0.3014538
-#>                                        Moodiness Cautiousness
-#> Emotional reactivity                   0.0000000    0.0000000
-#> Tendency toward worry                  0.0000000    0.0000000
-#> Sensitivity to stress                  0.0000000    0.0000000
-#> Self-awareness                         0.0000000    0.0000000
-#> Moodiness                              0.0000000    0.4805308
-#> Cautiousness                           0.4805308    0.0000000
-#> Thoughtfulness about future challenges 0.0000000    0.0000000
-#> Responsiveness to criticism            0.2043425    0.2064012
-#>                                        Thoughtfulness about future challenges
-#> Emotional reactivity                                                0.1529808
-#> Tendency toward worry                                               0.3022411
-#> Sensitivity to stress                                               0.0000000
-#> Self-awareness                                                      0.0000000
-#> Moodiness                                                           0.0000000
-#> Cautiousness                                                        0.0000000
-#> Thoughtfulness about future challenges                              0.0000000
-#> Responsiveness to criticism                                         0.0000000
-#>                                        Responsiveness to criticism
-#> Emotional reactivity                                     0.0000000
-#> Tendency toward worry                                    0.0000000
-#> Sensitivity to stress                                    0.0000000
-#> Self-awareness                                           0.3014538
-#> Moodiness                                                0.2043425
-#> Cautiousness                                             0.2064012
-#> Thoughtfulness about future challenges                   0.0000000
-#> Responsiveness to criticism                              0.0000000
+#>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
+#> EmoReactivity     0.0000000 0.1308241  0.2319812 0.0000000 0.0000000 0.0000000
+#> TendWorry         0.1308241 0.0000000  0.0000000 0.2609684 0.0000000 0.0000000
+#> StressSens        0.2319812 0.0000000  0.0000000 0.0000000 0.0000000 0.0000000
+#> SelfAware         0.0000000 0.2609684  0.0000000 0.0000000 0.0000000 0.0000000
+#> Moodiness         0.0000000 0.0000000  0.0000000 0.0000000 0.0000000 0.4805308
+#> Cautious          0.0000000 0.0000000  0.0000000 0.0000000 0.4805308 0.0000000
+#> ThoughtFuture     0.1529808 0.3022411  0.0000000 0.0000000 0.0000000 0.0000000
+#> RespCriticism     0.0000000 0.0000000  0.0000000 0.3014538 0.2043425 0.2064012
+#>               ThoughtFuture RespCriticism
+#> EmoReactivity     0.1529808     0.0000000
+#> TendWorry         0.3022411     0.0000000
+#> StressSens        0.0000000     0.0000000
+#> SelfAware         0.0000000     0.3014538
+#> Moodiness         0.0000000     0.2043425
+#> Cautious          0.0000000     0.2064012
+#> ThoughtFuture     0.0000000     0.0000000
+#> RespCriticism     0.0000000     0.0000000
 
 # Create and view a summary of the network estimation
 sum_result_mis <- summary(result_mis)
@@ -358,12 +268,8 @@ sum_result_mis
 #> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
-#>                   Emotional reactivity                  Tendency toward worry 
-#>                                    420                                    420 
-#>                  Sensitivity to stress                         Self-awareness 
-#>                                    420                                    420 
-#>                              Moodiness                           Cautiousness 
-#>                                    420                                    420 
-#> Thoughtfulness about future challenges            Responsiveness to criticism 
-#>                                    420                                    420
+#> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
+#>           420           420           420           420           420 
+#>      Cautious ThoughtFuture RespCriticism 
+#>           420           420           420
 ```

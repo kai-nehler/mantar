@@ -24,6 +24,8 @@
 #' \describe{
 #'  \item{regression}{Named vector of regression coefficients for the dependent variable.}
 #'  \item{R2}{R-squared value of the regression model.}
+#'  \item{n}{Sample size used in the regression model.}
+#'  \item{args}{List of arguments used in the regression model, including `k`, `missing_handling`, and `nimp`.}
 #'  }
 #'
 #' @export
@@ -103,6 +105,7 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
                                                          estimator = "ML", output = "fit")))
         if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
         mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
+        nimp <- NULL
 
       } else if (missing_handling == "stacked-mi"){
 
@@ -121,12 +124,15 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
         colnames(stacked_data) <- original_names  # restore original column names
         mat <- stats::cor(stacked_data)
       } else if (missing_handling == "pairwise"){
-        mat <- stats::cor(data, use = "pairwise.complete.obs")
+        mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
+        nimp <- NULL
       } else if (missing_handling == "listwise"){
-        mat <- stats::cor(data, use = "complete.obs")
+        mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
+        nimp <- NULL
       }
     } else {
-      mat <- stats::cor(data)
+      mat <- stats::cov2cor(stats::cov(data))
+      nimp <- missing_handling <- NULL
     }
 
     if (is.null(n)){
@@ -144,17 +150,26 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
       stop("Length of 'n' must be 1.")
     }
     mat <- stats::cov2cor(mat)
+    nimp <- missing_handling <- NULL
   }
+
 
   mod <- pred_search(mat = mat, dep_ind = dep_ind,
                          possible_pred_ind = setdiff(1:ncol(mat), dep_ind),
                      n = n, k = k)
 
   regression <- mod$actual_betas
-  names(regression) <- mod$actual_preds
-  R2 <- 1 - mod$actual_resid_var
+  names(regression) <- colnames(mat)[mod$actual_preds]
 
-  return(list(regression = regression,  R2 = R2))
+  result <- list(
+    regression = regression,
+    R2 = 1 - mod$actual_resid_var,
+    n = n,
+    args = list(k = k, missing_handling = missing_handling, nimp = nimp)
+  )
+
+  class(result) <- c("mantar_regression")
+  return(result)
 }
 
 

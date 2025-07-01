@@ -3,7 +3,7 @@ test_that("sample_size_full_works", {
 })
 
 test_that("sample_size_mis_works", {
-  expect_equal(calculate_sample_size(data = mantar_dummy_mis, n_calc = "TOtal"), rep(600, 8))
+  expect_equal(calculate_sample_size(data = mantar_dummy_mis, n_calc = "Total"), rep(600, 8))
 })
 
 test_that("error_for_different_ncalc", {

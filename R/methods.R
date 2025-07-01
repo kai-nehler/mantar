@@ -70,3 +70,35 @@ plot.mantar_network <- function(x, layout = "spring", ...) {
   qgraph::qgraph(x$pcor, layout = layout, ...)
 }
 
+#' @export
+print.mantar_regression <- function(x, ...) {
+  print(x$regression)
+
+  invisible(x)
+}
+
+#' @export
+summary.mantar_regression <- function(object, ...) {
+  stopifnot(inherits(object, "mantar_regression"))
+
+  result <- list(
+    regression = object$regression,
+    R2 = object$R2,
+    n = object$n,
+    args = object$args
+  )
+
+  class(result) <- "summary.mantar_regression"
+  return(result)
+}
+
+#' @export
+print.summary.mantar_regression <- function(x, ...) {
+  cat("Regression results:\n")
+  print(x$regression)
+
+  cat(sprintf("\nR-squared: %.3f\n", x$R2))
+  cat(sprintf("The sample size used in the predictor selection: %d\n", x$n))
+
+  invisible(x)
+}
