@@ -6,7 +6,7 @@ test_that("regression_opt() works with full data and AIC", {
   )
 
   expect_type(result, "list")
-  expect_named(result, c("regression", "R2"))
+  expect_named(result, c("regression", "R2", "n", "args"))
   expect_type(result$regression, "double")
   expect_type(result$R2, "double")
   expect_true(length(result$regression) >= 0)
@@ -21,7 +21,7 @@ test_that("regression_opt() works with data with two-step EM missingness and BIC
    )
 
   expect_type(result_mis, "list")
-  expect_named(result_mis, c("regression", "R2"))
+  expect_named(result_mis, c("regression", "R2", "n", "args"))
   expect_type(result_mis$regression, "double")
   expect_type(result_mis$R2, "double")
 })
@@ -36,7 +36,7 @@ test_that("regression_opt() works with data with stacked MI missingness and BIC"
   )
 
   expect_type(result_mis, "list")
-  expect_named(result_mis, c("regression", "R2"))
+  expect_named(result_mis, c("regression", "R2", "n", "args"))
   expect_type(result_mis$regression, "double")
   expect_type(result_mis$R2, "double")
 })

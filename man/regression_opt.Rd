@@ -48,6 +48,8 @@ A list with the following elements:
 \describe{
 \item{regression}{Named vector of regression coefficients for the dependent variable.}
 \item{R2}{R-squared value of the regression model.}
+\item{n}{Sample size used in the regression model.}
+\item{args}{List of arguments used in the regression model, including \code{k}, \code{missing_handling}, and \code{nimp}.}
 }
 }
 \description{
