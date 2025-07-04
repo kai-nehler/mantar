@@ -13,6 +13,7 @@ neighborhood_net(
   ordinal = FALSE,
   k = "log(n)",
   nimp = 20,
+  method = "pmm",
   pcor_merge_rule = "and"
 )
 }
@@ -43,6 +44,8 @@ Used only if \code{data} is \code{NULL}.}
 \item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
+
+\item{method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
 
 \item{pcor_merge_rule}{Rule for merging regression weights into partial correlations.
 \code{"and"} estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.

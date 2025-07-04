@@ -19,6 +19,7 @@
 #' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
 #' @param ordinal Logical indicating whether the data should be treated as ordinal by computing the polychoric correlation matrix to use in the matrix based node-wise regressions. Only available for full data or in combination with `"stacked-mi"` and `"listwise"` for missing data handling.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
+#' @param method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
 #' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
@@ -71,7 +72,7 @@
 #' result_mis$pcor
 neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual",
                              missing_handling = "two-step-em", ordinal = FALSE,
-                             k = "log(n)", nimp = 20, pcor_merge_rule = "and"){
+                             k = "log(n)", nimp = 20, method = "pmm", pcor_merge_rule = "and"){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
@@ -122,7 +123,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
         original_names <- colnames(data)
         colnames(data) <- make.names(original_names)
 
-        imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = 'pmm',
+        imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = method,
                                                     ridge = 0, donors = 5, ls.method = "qr"))
         stacked_data <- mice::complete(imputed_data, c(1:nimp))
         colnames(stacked_data) <- original_names  # restore original column names
