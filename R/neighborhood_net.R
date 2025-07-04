@@ -17,6 +17,7 @@
 #' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
 #' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
 #' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
+#' @param ordinal Logical indicating whether the data should be treated as ordinal by computing the polychoric correlation matrix to use in the matrix based node-wise regressions. Only available for full data or in combination with `"stacked-mi"` and `"listwise"` for missing data handling.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
@@ -69,12 +70,20 @@
 #' # View estimated partial correlations
 #' result_mis$pcor
 neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual",
-                             missing_handling = "two-step-em",
+                             missing_handling = "two-step-em", ordinal = FALSE,
                              k = "log(n)", nimp = 20, pcor_merge_rule = "and"){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
+
+  # Check if package is installed if ordinal is TRUE
+  if (ordinal && !requireNamespace("psych", quietly = TRUE)) {
+    stop(
+      "Package \"psych\" must be installed to use this function with ordinal data.",
+      call. = FALSE
+    )
+  }
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
@@ -96,6 +105,10 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
                                                          estimator = "ML", output = "fit")))
         if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
         mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
+        if (ordinal){
+          message("Using a specific two-step EM algorithm for ordinal data is not implemented at the moment.
+                  Will proceed with the two-step EM approach for continuous data.")
+        }
         nimp <- NULL
 
       } else if (missing_handling == "stacked-mi"){
@@ -113,17 +126,33 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
                                                     ridge = 0, donors = 5, ls.method = "qr"))
         stacked_data <- mice::complete(imputed_data, c(1:nimp))
         colnames(stacked_data) <- original_names  # restore original column names
-        mat <- stats::cor(stacked_data)
+        if (!ordinal){
+          mat <- stats::cor(stacked_data)
+        }else {
+          mat <- psych::polychoric(stacked_data)$rho
+        }
 
       } else if (missing_handling == "pairwise"){
         mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
+        if (ordinal){
+          message("Using pairwise deletion with ordinal data is not implemented at the moment. Will proceed with
+                  the pearson correlation matrix computed using pairwise deletion.")
+        }
         nimp <- NULL
       } else if (missing_handling == "listwise"){
-        mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
+        if (!ordinal){
+          mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
+        } else {
+          mat <- psych::polychoric(data)$rho
+        }
         nimp <- NULL
       }
     } else {
-      mat <- stats::cov2cor(stats::cov(data))
+      if (!ordinal){
+        mat <- stats::cov2cor(stats::cov(data))
+      } else {
+        mat <- psych::polychoric(data)$rho
+      }
       missing_handling <- NULL
       nimp <- NULL
     }

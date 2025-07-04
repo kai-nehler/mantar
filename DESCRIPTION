@@ -13,6 +13,7 @@ Suggests:
     mice,
     lavaan,
     qgraph,
+    psych,
     testthat (>= 3.0.0)
 LazyData: true
 Encoding: UTF-8

@@ -10,6 +10,7 @@ neighborhood_net(
   mat = NULL,
   n_calc = "individual",
   missing_handling = "two-step-em",
+  ordinal = FALSE,
   k = "log(n)",
   nimp = 20,
   pcor_merge_rule = "and"
@@ -36,6 +37,8 @@ Used only if \code{data} is \code{NULL}.}
 \code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.
 \code{"pairwise"} uses pairwise deletion to estimate the covariance matrix from the data.
 \code{"listwise"} uses listwise deletion to estimate the covariance matrix from the data.}
+
+\item{ordinal}{Logical indicating whether the data should be treated as ordinal by computing the polychoric correlation matrix to use in the matrix based node-wise regressions. Only available for full data or in combination with \code{"stacked-mi"} and \code{"listwise"} for missing data handling.}
 
 \item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 
