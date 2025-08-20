@@ -6,23 +6,23 @@
 #' Must be provided if a correlation matrix (`mat`) is supplied instead of raw data.
 #' @param mat Optional covariance or correlation matrix for the variables to be included in the network.
 #' Used only if \code{data} is \code{NULL}.
-#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
 #' @param n_calc Method for calculating the sample size for node-wise regression models. Can be one of:
 #' `"individual"` (sample size for each variable is the number of non-missing observations for that variable),
 #' `"average"` (sample size is the average number of non-missing observations across all variables),
 #' `"max"` (sample size is the maximum number of non-missing observations across all variables),
 #' `"total"` (sample size is the total number of observations across in the data set / number of rows).
+#' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default `k = "log(n)"` (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
+#' @param cor_method Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is `"adapted"`. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (`"polychoric"` or `"pearson"`).
+#' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
+#' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
+#' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
 #' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
 #' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
 #' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
 #' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
-#' @param ordinal Logical indicating whether the data should be treated as ordinal by computing the polychoric correlation matrix to use in the matrix based node-wise regressions. Only available for full data or in combination with `"stacked-mi"` and `"listwise"` for missing data handling.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
-#' @param method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
-#' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
-#' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
-#' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
+#' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
 #'
 #' @details
 #' This function estimates a network structure using neighborhood selection guided by information criteria.
@@ -34,7 +34,7 @@
 #' In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity—but may still be preferred in such cases due to its much faster runtime.
 #'
 #' Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
-#' During imputation, all variables are imputed using predictive mean matching (see e.g., van Buuren, 2018), with all other variables in the data set used as predictors.
+#' During imputation, all variables are imputed by default using predictive mean matching (see, e.g., van Buuren, 2018), with all other variables in the dataset serving as predictors.
 #'
 #' @references
 #' Nehler, K. J., & Schultze, M. (2024). *Handling missing values when using neighborhood selection for network analysis*. https://doi.org/10.31234/osf.io/qpj35
@@ -49,7 +49,7 @@
 #'   \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 #'   \item{betas}{Matrix of regression coefficients from the final regression models.}
 #'   \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
-#'   \item{args}{List of arguments used in the function call, including `pcor_merge_rule`, `k`, `missing_handling`, and `nimp`.}
+#'   \item{args}{List of settings used in the network estimation.}
 #' }
 #' @export
 #'
@@ -70,93 +70,24 @@
 #'
 #' # View estimated partial correlations
 #' result_mis$pcor
-neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual",
-                             missing_handling = "two-step-em", ordinal = FALSE,
-                             k = "log(n)", nimp = 20, method = "pmm", pcor_merge_rule = "and"){
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", k = "log(n)",
+                             cor_method = "adapted", pcor_merge_rule = "and",
+                             missing_handling = "two-step-em",
+                              nimp = 20, imp_method = "pmm"){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
-
-  # Check if package is installed if ordinal is TRUE
-  if (ordinal && !requireNamespace("psych", quietly = TRUE)) {
-    stop(
-      "Package \"psych\" must be installed to use this function with ordinal data.",
-      call. = FALSE
-    )
-  }
+  cor_method <- match.arg(tolower(cor_method), choices = c("adapted", "pearson", "polychoric"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
 
-
   if (!is.null(data)) {
-    if (anyNA(data)){
-      if (missing_handling == "two-step-em"){
 
-        if (!requireNamespace("lavaan", quietly = TRUE)) {
-          stop(
-            "Package \"lavaan\" must be installed to use this function.",
-            call. = FALSE
-          )
-        }
-
-        lavobject <- suppressWarnings(try(lavaan::lavCor(data,
-                                                         missing = "ml", se = "none", meanstructure = TRUE,
-                                                         estimator = "ML", output = "fit")))
-        if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
-        mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
-        if (ordinal){
-          message("Using a specific two-step EM algorithm for ordinal data is not implemented at the moment.
-                  Will proceed with the two-step EM approach for continuous data.")
-        }
-        nimp <- NULL
-
-      } else if (missing_handling == "stacked-mi"){
-
-        if (!requireNamespace("mice", quietly = TRUE)) {
-          stop(
-            "Package \"mice\" must be installed to use this function.",
-            call. = FALSE
-          )
-        }
-        original_names <- colnames(data)
-        colnames(data) <- make.names(original_names)
-
-        imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = method,
-                                                    ridge = 0, donors = 5, ls.method = "qr"))
-        stacked_data <- mice::complete(imputed_data, c(1:nimp))
-        colnames(stacked_data) <- original_names  # restore original column names
-        if (!ordinal){
-          mat <- stats::cor(stacked_data)
-        }else {
-          mat <- psych::polychoric(stacked_data)$rho
-        }
-
-      } else if (missing_handling == "pairwise"){
-        mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
-        if (ordinal){
-          message("Using pairwise deletion with ordinal data is not implemented at the moment. Will proceed with
-                  the pearson correlation matrix computed using pairwise deletion.")
-        }
-        nimp <- NULL
-      } else if (missing_handling == "listwise"){
-        if (!ordinal){
-          mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
-        } else {
-          mat <- psych::polychoric(data)$rho
-        }
-        nimp <- NULL
-      }
-    } else {
-      if (!ordinal){
-        mat <- stats::cov2cor(stats::cov(data))
-      } else {
-        mat <- psych::polychoric(data)$rho
-      }
-      missing_handling <- NULL
-      nimp <- NULL
-    }
+    cor_out <- cor_calc(data = data, missing_handling = missing_handling,
+                        cor_method = cor_method, nimp = nimp, imp_method = imp_method)
+    list2env(cor_out, envir = environment())
 
     if (is.null(ns)){
       if (!(n_calc %in% c("individual", "average", "max", "total"))){
@@ -179,8 +110,8 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     pcor = mod$partials,
     betas = mod$beta_mat,
     ns = ns,
-    args = list(pcor_merge_rule = pcor_merge_rule, k = k,
-                missing_handling = missing_handling, nimp = nimp)
+    args = list(k = k, cor_method = cor_method, pcor_merge_rule = pcor_merge_rule,
+                missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
   )
 
   class(result) <- c("mantar_network")

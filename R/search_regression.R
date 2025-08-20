@@ -12,20 +12,22 @@
 #' `"average"` (sample size is the average number of non-missing observations across all variables),
 #' `"max"` (sample size is the maximum number of non-missing observations across all variables),
 #' `"total"` (sample size is the total number of observations across in the data set / number of rows).
+#' @param k Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be `k = 2`.
+#' @param cor_method Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is `"adapted"`. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (`"polychoric"` or `"pearson"`).
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
 #' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
 #' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
 #' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
 #' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
-#' @param k Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be `k = 2`.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
+#' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
 #'
 #' @return A list with the following elements:
 #' \describe{
 #'  \item{regression}{Named vector of regression coefficients for the dependent variable.}
 #'  \item{R2}{R-squared value of the regression model.}
 #'  \item{n}{Sample size used in the regression model.}
-#'  \item{args}{List of arguments used in the regression model, including `k`, `missing_handling`, and `nimp`.}
+#'  \item{args}{List of settings used in the regression model.}
 #'  }
 #'
 #' @export
@@ -58,12 +60,12 @@
 #'  result_mis$regression
 #'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
-                           n_calc = "individual",
-                           missing_handling = "stacked-mi",
-                           k = "log(n)", nimp = 20) {
+                           n_calc = "individual", k = "log(n)", cor_method = "adapted",
+                           missing_handling = "stacked-mi", nimp = 20, imp_method = "pmm") {
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
+  cor_method <- match.arg(tolower(cor_method), choices = c("adapted", "pearson", "polychoric"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
@@ -90,50 +92,10 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
   }
 
   if (!is.null(data)) {
-    if (anyNA(data)){
-      if (missing_handling == "two-step-em"){
 
-        if (!requireNamespace("lavaan", quietly = TRUE)) {
-          stop(
-            "Package \"lavaan\" must be installed to use this function.",
-            call. = FALSE
-          )
-        }
-
-        lavobject <- suppressWarnings(try(lavaan::lavCor(data,
-                                                         missing = "ml", se = "none", meanstructure = TRUE,
-                                                         estimator = "ML", output = "fit")))
-        if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
-        mat <- try(stats::cov2cor(lavaan::inspect(lavobject, "cov.ov")))
-        nimp <- NULL
-
-      } else if (missing_handling == "stacked-mi"){
-
-        if (!requireNamespace("mice", quietly = TRUE)) {
-          stop(
-            "Package \"mice\" must be installed to use this function.",
-            call. = FALSE
-          )
-        }
-        original_names <- colnames(data)
-        colnames(data) <- make.names(original_names)
-
-        imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = 'pmm',
-                                                    ridge = 0, donors = 5, ls.method = "qr"))
-        stacked_data <- mice::complete(imputed_data, c(1:nimp))
-        colnames(stacked_data) <- original_names  # restore original column names
-        mat <- stats::cor(stacked_data)
-      } else if (missing_handling == "pairwise"){
-        mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
-        nimp <- NULL
-      } else if (missing_handling == "listwise"){
-        mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
-        nimp <- NULL
-      }
-    } else {
-      mat <- stats::cov2cor(stats::cov(data))
-      nimp <- missing_handling <- NULL
-    }
+    cor_out <- cor_calc(data = data, cor_method = cor_method,
+                        missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
+    list2env(cor_out, envir = environment())
 
     if (is.null(n)){
       ns <- calculate_sample_size(data = data, n_calc = n_calc)
@@ -165,7 +127,8 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
     regression = regression,
     R2 = 1 - mod$actual_resid_var,
     n = n,
-    args = list(k = k, missing_handling = missing_handling, nimp = nimp)
+    args = list(k = k, cor_method = cor_method, missing_handling = missing_handling,
+                nimp = nimp, imp_method = imp_method)
   )
 
   class(result) <- c("mantar_regression")

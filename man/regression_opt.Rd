@@ -10,9 +10,11 @@ regression_opt(
   mat = NULL,
   dep_ind,
   n_calc = "individual",
-  missing_handling = "stacked-mi",
   k = "log(n)",
-  nimp = 20
+  cor_method = "adapted",
+  missing_handling = "stacked-mi",
+  nimp = 20,
+  imp_method = "pmm"
 )
 }
 \arguments{
@@ -33,15 +35,19 @@ If a correlation matrix (\code{mat}) is supplied instead of raw data, \code{n} m
 \code{"max"} (sample size is the maximum number of non-missing observations across all variables),
 \code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
 
+\item{k}{Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be \code{k = 2}.}
+
+\item{cor_method}{Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is \code{"adapted"}. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (\code{"polychoric"} or \code{"pearson"}).}
+
 \item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
 \code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
 \code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.
 \code{"pairwise"} uses pairwise deletion to estimate the covariance matrix from the data.
 \code{"listwise"} uses listwise deletion to estimate the covariance matrix from the data.}
 
-\item{k}{Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be \code{k = 2}.}
-
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
+
+\item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
 }
 \value{
 A list with the following elements:
@@ -49,7 +55,7 @@ A list with the following elements:
 \item{regression}{Named vector of regression coefficients for the dependent variable.}
 \item{R2}{R-squared value of the regression model.}
 \item{n}{Sample size used in the regression model.}
-\item{args}{List of arguments used in the regression model, including \code{k}, \code{missing_handling}, and \code{nimp}.}
+\item{args}{List of settings used in the regression model.}
 }
 }
 \description{

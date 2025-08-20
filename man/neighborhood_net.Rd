@@ -9,12 +9,12 @@ neighborhood_net(
   ns = NULL,
   mat = NULL,
   n_calc = "individual",
-  missing_handling = "two-step-em",
-  ordinal = FALSE,
   k = "log(n)",
+  cor_method = "adapted",
+  pcor_merge_rule = "and",
+  missing_handling = "two-step-em",
   nimp = 20,
-  method = "pmm",
-  pcor_merge_rule = "and"
+  imp_method = "pmm"
 )
 }
 \arguments{
@@ -33,23 +33,23 @@ Used only if \code{data} is \code{NULL}.}
 \code{"max"} (sample size is the maximum number of non-missing observations across all variables),
 \code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
 
+\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default \code{k = "log(n)"} (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
+
+\item{cor_method}{Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is \code{"adapted"}. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (\code{"polychoric"} or \code{"pearson"}).}
+
+\item{pcor_merge_rule}{Rule for merging regression weights into partial correlations.
+\code{"and"} estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
+\code{"or"} uses the available regression weight from one direction as partial correlation if the other is not included in the final model.}
+
 \item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
 \code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
 \code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.
 \code{"pairwise"} uses pairwise deletion to estimate the covariance matrix from the data.
 \code{"listwise"} uses listwise deletion to estimate the covariance matrix from the data.}
 
-\item{ordinal}{Logical indicating whether the data should be treated as ordinal by computing the polychoric correlation matrix to use in the matrix based node-wise regressions. Only available for full data or in combination with \code{"stacked-mi"} and \code{"listwise"} for missing data handling.}
-
-\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default '"log(n)"' (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
-
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
 
-\item{method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
-
-\item{pcor_merge_rule}{Rule for merging regression weights into partial correlations.
-\code{"and"} estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
-\code{"or"} uses the available regression weight from one direction as partial correlation if the other is not included in the final model.}
+\item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
 }
 \value{
 A list with the following elements:
@@ -57,7 +57,7 @@ A list with the following elements:
 \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 \item{betas}{Matrix of regression coefficients from the final regression models.}
 \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
-\item{args}{List of arguments used in the function call, including \code{pcor_merge_rule}, \code{k}, \code{missing_handling}, and \code{nimp}.}
+\item{args}{List of settings used in the network estimation.}
 }
 }
 \description{
@@ -73,7 +73,7 @@ According to simulations by Nehler and Schultze (2024), stacked multiple imputat
 In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity—but may still be preferred in such cases due to its much faster runtime.
 
 Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
-During imputation, all variables are imputed using predictive mean matching (see e.g., van Buuren, 2018), with all other variables in the data set used as predictors.
+During imputation, all variables are imputed by default using predictive mean matching (see, e.g., van Buuren, 2018), with all other variables in the dataset serving as predictors.
 }
 \examples{
 # Estimate network from full data set

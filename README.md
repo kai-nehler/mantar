@@ -148,13 +148,32 @@ suggests that the `"and"` rule yields more accurate partial correlation
 estimates than the `"or"` rule. Therefore, changing this default is
 **not recommended** unless you have a specific reason.
 
+#### Type of Correlation
+
+The `cor_method` argument specifies the type of correlation to be
+estimated. Currently, only two types are supported in this context, as
+these were evaluated in the given setting.
+
+- `"pearson"`: computes the **Pearson correlation**.
+- `"polychoric"`: computes the **polychoric correlation**.
+
+The default for this argument is `"adapted"`, which automatically
+selects an appropriate correlation type based on the data. If all
+variables are continuous, `"pearson"` is used. If at least one variable
+is ordinal, the procedure considers the number of variables, the number
+of categories, and the sample size to decide whether to apply
+`"pearson"` or `"polychoric"`. If you want to force a specific type of
+correlation, you can set `cor_method` to either `"pearson"` or
+`"polychoric"`.
+
 ### Example of Network Estimation without Missing Data
 
 ``` r
-# Estimate network from full data set using BIC and and rule
+# Estimate network from full data set using BIC, the and rule as well as an adapted correlation type
 result <- neighborhood_net(data = mantar_dummy_full, 
                            k = "log(n)", 
-                           pcor_merge_rule = "and")
+                           pcor_merge_rule = "and",
+                           cor_method = "adapted")
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
 result
@@ -220,14 +239,20 @@ The `missing_handling` argument specifies how the correlation matrix is
 estimated when the input data contains missing values. Two approaches
 are supported:
 
-- `"two-step-em"`: Applies a classic **Expectation-Maximization (EM)**
+- `"two-step-em"`: Applies a standard **Expectation-Maximization (EM)**
   algorithm to estimate the covariance matrix.
 - `"stacked-mi"`: Applies **multiple imputation** to create several
   completed datasets, which are then stacked into a single dataset. A
   correlation matrix is computed from this stacked data.
 
+As described previously, deletion techniques (listwise and pairwise) are
+also available, but their use is not recommended. When `"two-step-em"`
+is selected, the correlation matrix is always based on Pearson
+correlations.
+
 If `"stacked-mi"` is used, the `nimp` argument controls the number of
-imputations (default: `20`).
+imputations (default: `20`), while `imp_method` specifies the imputation
+method (default: `"pmm"` for predictive mean matching).
 
 ### Example of Network Estimation with Missing Data
 
@@ -235,8 +260,9 @@ imputations (default: `20`).
 # Estimate network for data set with missing values
 result_mis <- neighborhood_net(data = mantar_dummy_mis, 
                                 n_calc = "individual", 
-                                missing_handling = "two-step-em", 
-                                pcor_merge_rule = "and")
+                                missing_handling = "two-step-em",
+                                pcor_merge_rule = "and",
+                                cor_method = "adapted")
 # View estimated partial correlations
 result_mis
 #>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
