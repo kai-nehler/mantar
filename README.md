@@ -13,13 +13,26 @@ selection using the Bayesian Information Criterion (BIC).
 
 ## Installation
 
+The current stable version (0.1.1) is [available on
+CRAN](https://cran.r-project.org/package=stuart) and can be installed
+using the usual approach:
+
+``` r
+install.packages("mantar")
+```
+
 You can install the development version of mantar from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/kai-nehler/mantar) with:
 
 ``` r
 # install.packages("pak")
-pak::pak("kai-nehler/mantar")
+pak::pak("kai-nehler/mantar@develop")
 ```
+
+The extension `@develop` ensures that you get the latest development
+version of the package, which may include new features and bug fixes not
+yet available in the stable release on CRAN. Exluding this extension
+will install the same version as the one on CRAN.
 
 After installation the easiest way to get an overview of functions and
 capabilities is to use `?mantar` to open the package help-file. You
