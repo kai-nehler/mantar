@@ -174,6 +174,7 @@ result <- neighborhood_net(data = mantar_dummy_full,
                            k = "log(n)", 
                            pcor_merge_rule = "and",
                            cor_method = "adapted")
+#> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
 result
@@ -263,6 +264,7 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 missing_handling = "two-step-em",
                                 pcor_merge_rule = "and",
                                 cor_method = "adapted")
+#> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
 # View estimated partial correlations
 result_mis
 #>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
