@@ -7,6 +7,7 @@
 
 [![CRAN_Status_Badge](https://r-pkg.org/badges/version/mantar)](https://cran.r-project.org/package=mantar)
 [![Download_Badge](https://cranlogs.r-pkg.org/badges/grand-total/mantar)](https://www.datasciencemeta.com/rpackages)
+[![R-CMD-check](https://github.com/kai-nehler/mantar/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kai-nehler/mantar/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 `mantar` provides users with several methods for handling missing data
