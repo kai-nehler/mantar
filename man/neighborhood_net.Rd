@@ -10,7 +10,7 @@ neighborhood_net(
   mat = NULL,
   n_calc = "individual",
   k = "log(n)",
-  cor_method = "adapted",
+  ordered = "adapted",
   pcor_merge_rule = "and",
   missing_handling = "two-step-em",
   nimp = 20,
@@ -35,17 +35,22 @@ Used only if \code{data} is \code{NULL}.}
 
 \item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default \code{k = "log(n)"} (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
 
-\item{cor_method}{Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is \code{"adapted"}. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (\code{"polychoric"} or \code{"pearson"}).}
+\item{ordered}{Specifies whether variables should be treated as ordered categorical when determining correlations.
+Options are \code{TRUE}, \code{FALSE}, or \code{"adapted"}. The argument can be provided as a single value
+(applied to all variables) or as a vector of length equal to the number of variables (using only \code{TRUE} and \code{FALSE}),
+allowing mixed specifications. With the default \code{"adapted"}, the treatment of each variable is determined according to
+guidelines from preliminary simulations (considering the number of cases, number of variables,
+and number of categories). See the \emph{Details} section of \code{\link[=cor_calc]{cor_calc()}} for further elaboration.}
 
 \item{pcor_merge_rule}{Rule for merging regression weights into partial correlations.
 \code{"and"} estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
 \code{"or"} uses the available regression weight from one direction as partial correlation if the other is not included in the final model.}
 
 \item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
-\code{"tow-step-em"} uses a classic EM algorithm to estimate the covariance matrix from the data.
-\code{"stacked-mi"} uses multiple imputation to estimate the covariance matrix from the data.
-\code{"pairwise"} uses pairwise deletion to estimate the covariance matrix from the data.
-\code{"listwise"} uses listwise deletion to estimate the covariance matrix from the data.}
+\code{"tow-step-em"} uses a classic EM algorithm to estimate the correlation matrix from the data.
+\code{"stacked-mi"} uses multiple imputation to estimate the correlation matrix from the data.
+\code{"pairwise"} uses pairwise deletion to estimate the correlation matrix from the data.
+\code{"listwise"} uses listwise deletion to estimate the correlation matrix from the data.}
 
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
 

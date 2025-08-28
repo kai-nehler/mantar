@@ -12,15 +12,20 @@
 #' `"max"` (sample size is the maximum number of non-missing observations across all variables),
 #' `"total"` (sample size is the total number of observations across in the data set / number of rows).
 #' @param k Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default `k = "log(n)"` (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be `k = "2"`.
-#' @param cor_method Two correlation methods are currently implemented, namely polychoric and pearson. The default setting for is `"adapted"`. In this mode, an appropriate method is automatically selected based on the data (number of cases, number of variables, number of categories). This automatic selection can be overridden by explicitly specifying a method (`"polychoric"` or `"pearson"`).
+#' @param ordered Specifies whether variables should be treated as ordered categorical when determining correlations.
+#' Options are `TRUE`, `FALSE`, or `"adapted"`. The argument can be provided as a single value
+#' (applied to all variables) or as a vector of length equal to the number of variables (using only `TRUE` and `FALSE`),
+#' allowing mixed specifications. With the default `"adapted"`, the treatment of each variable is determined according to
+#' guidelines from preliminary simulations (considering the number of cases, number of variables,
+#' and number of categories). See the *Details* section of [cor_calc()] for further elaboration.
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations.
 #' `"and"` estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
 #' `"or"` uses the available regression weight from one direction as partial correlation if the other is not included in the final model.
 #' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
-#' `"tow-step-em"` uses a classic EM algorithm to estimate the covariance matrix from the data.
-#' `"stacked-mi"` uses multiple imputation to estimate the covariance matrix from the data.
-#' `"pairwise"` uses pairwise deletion to estimate the covariance matrix from the data.
-#' `"listwise"` uses listwise deletion to estimate the covariance matrix from the data.
+#' `"tow-step-em"` uses a classic EM algorithm to estimate the correlation matrix from the data.
+#' `"stacked-mi"` uses multiple imputation to estimate the correlation matrix from the data.
+#' `"pairwise"` uses pairwise deletion to estimate the correlation matrix from the data.
+#' `"listwise"` uses listwise deletion to estimate the correlation matrix from the data.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
 #'
@@ -71,14 +76,13 @@
 #' # View estimated partial correlations
 #' result_mis$pcor
 neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", k = "log(n)",
-                             cor_method = "adapted", pcor_merge_rule = "and",
+                             ordered = "adapted", pcor_merge_rule = "and",
                              missing_handling = "two-step-em",
                               nimp = 20, imp_method = "pmm"){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
-  cor_method <- match.arg(tolower(cor_method), choices = c("adapted", "pearson", "polychoric"))
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
@@ -86,7 +90,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
   if (!is.null(data)) {
 
     cor_out <- cor_calc(data = data, missing_handling = missing_handling,
-                        cor_method = cor_method, nimp = nimp, imp_method = imp_method)
+                        ordered = ordered, nimp = nimp, imp_method = imp_method)
     list2env(cor_out, envir = environment())
 
     if (is.null(ns)){
@@ -101,7 +105,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     }
     checker(ns = ns, mat = mat)
     mat <- stats::cov2cor(mat)
-    nimp <- missing_handling <- NULL
+    nimp <- missing_handling <- cor_method <- NULL
   }
 
   mod <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = pcor_merge_rule)

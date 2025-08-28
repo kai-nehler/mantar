@@ -3,6 +3,7 @@ checker <- function(...) {
   data <- args$data
   mat <- args$mat
   ns <- args$ns
+  n <- args$n
 
   # Check: Which input is provided?
   if (all(c("data", "mat") %in% names(args))) {
@@ -18,7 +19,9 @@ checker <- function(...) {
         }
       } else if (!is.null(data)) {
         if (!all(sapply(data, is.numeric))){
-          stop("All variables in 'data' must be numeric.")
+          stop("All variables in 'data' must be numeric.
+               If you have an ordered categorical variable stored as a factor, please convert it to numeric first.
+               This requirement helps prevent accidentally including unordered categorical variables in the calculation.")
         }
       } else if (!is.null(mat)) {
         if (!is.matrix(mat)) {
@@ -48,4 +51,13 @@ checker <- function(...) {
       }
     }
   }
+
+  if ("n" %in% names(args)) {
+    if (length(n) != 1){
+      stop("Length of 'n' must be 1.")
+    } else if (!is.numeric(n) || n <= 0) {
+      stop("'n' must be a positive numeric value.")
+    }
+  }
 }
+
