@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 ## Installation
 
-The current stable version (0.1.1) is [available on CRAN](https://cran.r-project.org/package=stuart) and can be installed using the usual approach:
+The current stable version (0.2.0) is [available on CRAN](https://cran.r-project.org/package=stuart) and can be installed using the usual approach:
 
 ``` r
 install.packages("mantar")

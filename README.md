@@ -17,7 +17,7 @@ selection using the Bayesian Information Criterion (BIC).
 
 ## Installation
 
-The current stable version (0.1.1) is [available on
+The current stable version (0.2.0) is [available on
 CRAN](https://cran.r-project.org/package=stuart) and can be installed
 using the usual approach:
 
