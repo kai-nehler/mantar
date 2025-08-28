@@ -1,9 +1,11 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# mantar - Missingness Alleviation for NeTwork Analysis in R
+# mantar - Missingness Alleviation for NeTwork Analysis in R <img src="man/figures/sticker.png" align="right" height="138" alt="mantar sticker" /></a>
 
 <!-- badges: start -->
+
+[![CRAN_Status_Badge](https://r-pkg.org/badges/version/mantar)](https://cran.r-project.org/package=mantar)
 <!-- badges: end -->
 
 `mantar` provides users with several methods for handling missing data
@@ -163,21 +165,40 @@ estimates than the `"or"` rule. Therefore, changing this default is
 
 #### Type of Correlation
 
-The `cor_method` argument specifies the type of correlation to be
-estimated. Currently, only two types are supported in this context, as
-these were evaluated in the given setting.
+The `ordered` argument specifies how variables are treated when
+estimating correlations from raw data.
 
-- `"pearson"`: computes the **Pearson correlation**.
-- `"polychoric"`: computes the **polychoric correlation**.
+- **Global specification:**
+  - `ordered = TRUE`: all variables are treated as ordered categorical  
+  - `ordered = FALSE`: all variables are treated as continuous  
+- **Variable-specific specification:**
+  - A logical vector of length equal to the number of variables can be
+    supplied to indicate which variables are treated as ordered
+    categorical (e.g., `ordered = c(TRUE, FALSE, FALSE, TRUE)`).  
+- If a global specification is used, the function automatically creates
+  a vector of this value with the same length as the number of
+  variables.
 
-The default for this argument is `"adapted"`, which automatically
-selects an appropriate correlation type based on the data. If all
-variables are continuous, `"pearson"` is used. If at least one variable
-is ordinal, the procedure considers the number of variables, the number
-of categories, and the sample size to decide whether to apply
-`"pearson"` or `"polychoric"`. If you want to force a specific type of
-correlation, you can set `cor_method` to either `"pearson"` or
-`"polychoric"`.
+Based on these specifications, the function applies the appropriate
+correlation type for each pair of variables:  
+- both `FALSE`: **Pearson correlation**  
+- one `TRUE` and one `FALSE`: **polyserial correlation**  
+- both `TRUE`: **polychoric correlation**
+
+The default is `"adapted"`, which automatically determines whether each
+variable is treated as ordered categorical. In this mode, the
+procedure:  
+1. Checks the ratio of available observations (excluding missing values)
+to the number of variables. If this ratio is small, all variables are
+set to `FALSE` (continuous), as preliminary simulations showed this can
+reduce bias.  
+2. If the ratio is sufficiently high, variables with more than seven
+categories are treated as continuous (`FALSE`), while all others are
+treated as ordered categorical (`TRUE`).
+
+Note that `"adapted"` can only be provided as a single value (not as a
+vector) and therefore applies to all variables simultaneously or not at
+all.
 
 ### Example of Network Estimation without Missing Data
 
@@ -186,7 +207,7 @@ correlation, you can set `cor_method` to either `"pearson"` or
 result <- neighborhood_net(data = mantar_dummy_full, 
                            k = "log(n)", 
                            pcor_merge_rule = "and",
-                           cor_method = "adapted")
+                           ordered = "adapted")
 #> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
@@ -276,7 +297,7 @@ result_mis <- neighborhood_net(data = mantar_dummy_mis,
                                 n_calc = "individual", 
                                 missing_handling = "two-step-em",
                                 pcor_merge_rule = "and",
-                                cor_method = "adapted")
+                                ordered = "adapted")
 #> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
 # View estimated partial correlations
 result_mis

@@ -66,7 +66,7 @@
 #'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
                            n_calc = "individual", k = "log(n)", ordered = "adapted",
-                           missing_handling = "stacked-mi", nimp = 20, imp_method = "pmm") {
+                           missing_handling = "stacked-mi", nimp = 20, imp_method = "pmm", ...) {
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))

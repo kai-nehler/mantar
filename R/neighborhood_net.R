@@ -78,7 +78,7 @@
 neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", k = "log(n)",
                              ordered = "adapted", pcor_merge_rule = "and",
                              missing_handling = "two-step-em",
-                              nimp = 20, imp_method = "pmm"){
+                              nimp = 20, imp_method = "pmm", ...){
 
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
