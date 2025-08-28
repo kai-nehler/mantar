@@ -4,10 +4,11 @@
 \name{mantar_dummy_full}
 \alias{mantar_dummy_full}
 \alias{mantar_dummy_mis}
+\alias{mantar_dummy_full_cat}
 \title{Dummy data sets for illustration purposes in the mantar package}
 \format{
 \describe{
-\item{Both data frames}{8 columns; rows: 400 (\code{mantar_dummy_full}) and 600 (\code{mantar_dummy_mis})}
+\item{Both data frames}{8 columns; rows: 400 (\code{mantar_dummy_full} and \code{mantar_dummy_full_cat}) and 600 (\code{mantar_dummy_mis})}
 \item{Columns}{\describe{
 \item{EmoReactivity}{Tending to feel emotions strongly in response to life events.}
 \item{TendWorry}{Being more likely to feel concerned or uneasy.}
@@ -21,29 +22,36 @@
 }
 
 An object of class \code{data.frame} with 600 rows and 8 columns.
+
+An object of class \code{data.frame} with 400 rows and 8 columns.
 }
 \usage{
 mantar_dummy_full
 
 mantar_dummy_mis
+
+mantar_dummy_full_cat
 }
 \description{
-These two \strong{simulated data sets} are provided for illustration purposes.
+These \strong{simulated data sets} are provided for illustration purposes.
 They are based on a sparse psychological network structure with a single underlying construct.
 The column names represent core properties of neuroticism but are purely made up to make the example more illustrative.
 \itemize{
-\item \strong{mantar_dummy_full}: A complete data set without missing values.
-\item \strong{mantar_dummy_mis}: A version with approximately 30\% missing values per column.
+\item \strong{mantar_dummy_full}: A complete data set of continuous variables without missing values.
+\item \strong{mantar_dummy_mis}: A data set of continuous variables with approximately 30\% missing values in each column.
+\item \strong{mantar_dummy_full_cat}: A complete data set where variables are ordered categorical without missing values.
 }
 }
 \examples{
 # Load the data sets
 data(mantar_dummy_full)
 data(mantar_dummy_mis)
+data(mantar_dummy_full_cat)
 
 # View the first few rows of each data set
 head(mantar_dummy_full)
 head(mantar_dummy_mis)
+head(mantar_dummy_full_cat)
 
 }
 \keyword{data}

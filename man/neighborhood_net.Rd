@@ -14,7 +14,8 @@ neighborhood_net(
   pcor_merge_rule = "and",
   missing_handling = "two-step-em",
   nimp = 20,
-  imp_method = "pmm"
+  imp_method = "pmm",
+  ...
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ and number of categories). See the \emph{Details} section of \code{\link[=cor_ca
 \item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
 
 \item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
+
+\item{...}{Further arguments passed to internal functions.}
 }
 \value{
 A list with the following elements:

@@ -9,6 +9,7 @@
 ## New features
 
 * Allow different methods for correlation calculation based on the argument `ordered` across different functions, defining whether variables should be treated as ordered categorical or continuous.
+* Add dummy data set `mantar_dummy_full_cat` with only ordered categorical variables.
 
 # mantar 0.1.0
 

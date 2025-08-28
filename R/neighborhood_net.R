@@ -28,6 +28,7 @@
 #' `"listwise"` uses listwise deletion to estimate the correlation matrix from the data.
 #' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
 #' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
+#' @param ... Further arguments passed to internal functions.
 #'
 #' @details
 #' This function estimates a network structure using neighborhood selection guided by information criteria.

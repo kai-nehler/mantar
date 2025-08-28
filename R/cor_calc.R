@@ -87,7 +87,7 @@ cor_calc <- function(data, ordered = "adapted",
     }
   }
 
-  if (unique(ordered) == "adapted") {
+  if ("adapted" %in% ordered) {
     if ((sum(!is.na(data))/80) < (ncol(data) * (ncol(data) - 1) / 2)) {
       ordered <- rep(FALSE, ncol(data))
       text <- "Using 'pearson' correlation method due to small ratio of available information to estimated correlations."
@@ -99,7 +99,9 @@ cor_calc <- function(data, ordered = "adapted",
         if (sum(ordered) == ncol(data)) {
           text <- "Using only 'polychoric' correlations because all variables are ordered."
         } else {
-          text <- paste("Using mix of 'pearson', 'polychoric' and 'polyserial' correlations because some variables are ordered, but not all. Ordered Variable are ", names(data)[ordered], collapse = " ")
+          text <- paste(
+            "Using mix of 'pearson', 'polychoric' and 'polyserial' correlations because some variables are ordered, but not all. Ordered variables are",
+            paste(names(data)[ordered], collapse = ", "))
         }
       } else {
         text <- "Using the 'pearson' correlation method because the number of distinct values suggests continuous variables."
@@ -189,7 +191,8 @@ cor_calc <- function(data, ordered = "adapted",
     nimp <- NULL
   }
 
-  cor_method <- matrix(NA_character_, ncol(data), ncol(data), dimnames = list(names(data), names(data)))
+  cor_method <- matrix("", ncol(data), ncol(data), dimnames = list(names(data), names(data)))
+  diag(cor_method) <- "-"
 
   cor_method[lower.tri(cor_method)] <- ifelse(
     outer(ordered, ordered, "&")[lower.tri(cor_method)], "polychoric",
