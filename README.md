@@ -6,6 +6,7 @@
 <!-- badges: start -->
 
 [![CRAN_Status_Badge](https://r-pkg.org/badges/version/mantar)](https://cran.r-project.org/package=mantar)
+[![Download_Badge](https://r-pkg.org/badges/grand-total/mantar)](https://www.datasciencemeta.com/rpackages)
 <!-- badges: end -->
 
 `mantar` provides users with several methods for handling missing data
