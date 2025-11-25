@@ -2,7 +2,7 @@
 % Please edit documentation in R/neighborhood_net.R
 \name{neighborhood_net}
 \alias{neighborhood_net}
-\title{Estimate Network using Neighborhood Selection based on Information Criteria}
+\title{Network Estimation via Neighborhood Selection using Information Criteria}
 \usage{
 neighborhood_net(
   data = NULL,
@@ -10,7 +10,7 @@ neighborhood_net(
   mat = NULL,
   n_calc = "individual",
   k = "log(n)",
-  ordered = "adapted",
+  ordered = FALSE,
   pcor_merge_rule = "and",
   missing_handling = "two-step-em",
   nimp = 20,
@@ -19,43 +19,79 @@ neighborhood_net(
 )
 }
 \arguments{
-\item{data}{Raw data containing only the variables to be included in the network. May include missing values.}
+\item{data}{Optional raw data matrix or data frame containing the variables
+to be included in the network. May include missing values. If \code{data} is not
+provided (\code{NULL}), a covariance or correlation matrix must be supplied in \code{mat}.}
 
-\item{ns}{Numeric vector specifying the sample size for each variable in the data.
-If not provided, it will be computed based on the data.
-Must be provided if a correlation matrix (\code{mat}) is supplied instead of raw data.}
+\item{ns}{Optional numeric sample size specification. Can be a single value
+(same sample size is used for all regressions) or a vector (e.g., variable-wise sample
+sizes). When \code{data} is provided and \code{ns} is \code{NULL}, sample sizes are derived
+automatically from \code{data}. When \code{mat} is supplied instead of raw data,
+\code{ns} must be provided and should reflect the sample size underlying \code{mat}.}
 
-\item{mat}{Optional covariance or correlation matrix for the variables to be included in the network.
-Used only if \code{data} is \code{NULL}.}
+\item{mat}{Optional covariance or correlation matrix for the variables to be
+included in the network. Used only when \code{data} is \code{NULL}. If both \code{data} and
+\code{mat} are supplied, \code{mat} is ignored. When \code{mat} is used, \code{ns} must also be
+provided.}
 
-\item{n_calc}{Method for calculating the sample size for node-wise regression models. Can be one of:
-\code{"individual"} (sample size for each variable is the number of non-missing observations for that variable),
-\code{"average"} (sample size is the average number of non-missing observations across all variables),
-\code{"max"} (sample size is the maximum number of non-missing observations across all variables),
-\code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
+\item{n_calc}{Character string specifying how per-variable sample sizes for
+node-wise regression models are computed when \code{ns} is not supplied. If \code{ns}
+is provided, its values are used directly and \code{n_calc} is ignored. Possible
+values are:
+\describe{
+\item{\code{"individual"}}{For each variable, uses the number of non-missing
+observations for that variable.}
+\item{\code{"average"}}{Computes the average number of non-missing observations
+across all variables and uses this average as the sample size for every
+variable.}
+\item{\code{"max"}}{Computes the maximum number of non-missing observations
+across all variables and uses this maximum as the sample size for every
+variable.}
+\item{\code{"total"}}{Uses the total number of rows in \code{data} as the sample size
+for every variable.}
+}}
 
-\item{k}{Penalty per parameter (number of predictor + 1) to be used in node-wise regressions; the default \code{k = "log(n)"} (number of observations for the dependent variable) is the classical BIC. Alternatively, classical AIC would be \code{k = "2"}.}
+\item{k}{Penalty term per parameter (number of predictors + 1) used in the
+node-wise regression information criterion. The default \code{k = "log(n)"},
+where \code{n} is the number of observations for the dependent variable,
+corresponds to the classical BIC. Setting \code{k = "2"} yields the classical AIC.}
 
-\item{ordered}{Specifies whether variables should be treated as ordered categorical when determining correlations.
-Options are \code{TRUE}, \code{FALSE}, or \code{"adapted"}. The argument can be provided as a single value
-(applied to all variables) or as a vector of length equal to the number of variables (using only \code{TRUE} and \code{FALSE}),
-allowing mixed specifications. With the default \code{"adapted"}, the treatment of each variable is determined according to
-guidelines from preliminary simulations (considering the number of cases, number of variables,
-and number of categories). See the \emph{Details} section of \code{\link[=cor_calc]{cor_calc()}} for further elaboration.}
+\item{ordered}{Logical vector indicating whether each variable in \code{data}
+should be treated as ordered categorical. Only used when \code{data} is provided.
+If a single logical value is supplied, it is recycled to all variables.}
 
-\item{pcor_merge_rule}{Rule for merging regression weights into partial correlations.
-\code{"and"} estimates a partial correlation only if regression weights in both directions (e.g., from node 1 to 2 and from 2 to 1) are non-zero in the final models.
-\code{"or"} uses the available regression weight from one direction as partial correlation if the other is not included in the final model.}
+\item{pcor_merge_rule}{Character string specifying how regression weights
+from the node-wise models are merged into partial correlations. Possible
+values are:
+\describe{
+\item{\code{"and"}}{Estimates a partial correlation only if the regression
+weights in both directions (e.g., from node 1 to 2 and from node 2 to 1)
+are non-zero in the final models.}
+\item{\code{"or"}}{Uses the available regression weight from one direction as
+the partial correlation if the corresponding regression in the other
+direction is not included in the final model.}
+}}
 
-\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
-\code{"tow-step-em"} uses a classic EM algorithm to estimate the correlation matrix from the data.
-\code{"stacked-mi"} uses multiple imputation to estimate the correlation matrix from the data.
-\code{"pairwise"} uses pairwise deletion to estimate the correlation matrix from the data.
-\code{"listwise"} uses listwise deletion to estimate the correlation matrix from the data.}
+\item{missing_handling}{Character string specifying how correlations are
+estimated from the \code{data} input in the presence of missing values. Possible
+values are:
+\describe{
+\item{\code{"two-step-em"}}{Uses a classical EM algorithm to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"stacked-mi"}}{Uses stacked multiple imputation to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"pairwise"}}{Uses pairwise deletion to compute correlations from
+\code{data}.}
+\item{\code{"listwise"}}{Uses listwise deletion to compute correlations from
+\code{data}.}
+}}
 
-\item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
+\item{nimp}{Number of imputations (default: 20) to be used when
+\code{missing_handling = "stacked-mi"}.}
 
-\item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
+\item{imp_method}{Character string specifying the imputation method to be
+used when \code{missing_handling = "stacked-mi"} (default: \code{"pmm"} - predictive
+mean matching).}
 
 \item{...}{Further arguments passed to internal functions.}
 }
@@ -69,24 +105,27 @@ A list with the following elements:
 }
 }
 \description{
-Estimate Network using Neighborhood Selection based on Information Criteria
+Estimates a network structure through node-wise regression models, where each
+regression is selected via an information-criterion–based stepwise procedure.
+The selected regression coefficients are subsequently combined into partial
+correlations to form the final network.
 }
 \details{
 This function estimates a network structure using neighborhood selection guided by information criteria.
-Simulations by Williams et al. (2019) indicated that using the \code{"and"} rule for merging regression weights tends to yield more accurate partial correlation estimates than the \code{"or"} rule.
+Simulations by \insertCite{williams.2019;textual}{mantar} indicated that using the \code{"and"} rule for merging regression weights tends to yield more accurate partial correlation estimates than the \code{"or"} rule.
 Both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) are supported and have been shown to produce valid network structures.
 
 To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
-According to simulations by Nehler and Schultze (2024), stacked multiple imputation performs reliably across a range of sample sizes.
-In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity—but may still be preferred in such cases due to its much faster runtime.
+According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
+In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity - but may still be preferred in such cases due to its much faster runtime.
 
 Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
-During imputation, all variables are imputed by default using predictive mean matching (see, e.g., van Buuren, 2018), with all other variables in the dataset serving as predictors.
+During imputation, all variables are imputed by default using predictive mean matching \insertCite{@see e.g., @vanbuuren.2018}{mantar}, with all other variables in the data set serving as predictors.
 }
 \examples{
 # Estimate network from full data set
 # Using Akaike information criterion
-result <- neighborhood_net(data = mantar_dummy_full,
+result <- neighborhood_net(data = mantar_dummy_full_cont,
 k = "2")
 
 # View estimated partial correlations
@@ -94,7 +133,7 @@ result$pcor
 
 # Estimate network for data set with missings
 # Using Bayesian Information Criterion, individual sample sizes, and two-step EM
-result_mis <- neighborhood_net(data = mantar_dummy_mis,
+result_mis <- neighborhood_net(data = mantar_dummy_mis_cont,
 n_calc = "individual",
 missing_handling = "two-step-em")
 
@@ -102,9 +141,5 @@ missing_handling = "two-step-em")
 result_mis$pcor
 }
 \references{
-Nehler, K. J., & Schultze, M. (2024). \emph{Handling missing values when using neighborhood selection for network analysis}. https://doi.org/10.31234/osf.io/qpj35
-
-van Buuren, S. (2018). \emph{Flexible Imputation of Missing Data} (2nd ed.). CRC Press.
-
-Williams, D. R., Rhemtulla, M., Wysocki, A. C., & Rast, P. (2019). On nonregularized estimation of psychological networks. \emph{Multivariate Behavioral Research, 54}(5), 719–750. https://doi.org/10.1080/00273171.2019.1575716
+\insertAllCited{}
 }

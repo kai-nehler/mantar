@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/kai-nehler/mantar/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kai-nehler/mantar/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-`mantar` provides users with several methods for handling missing data in the context of network analysis. Currently, these methods are specifically implemented for network estimation via neighborhood selection using the Bayesian Information Criterion (BIC).
+`mantar` provides users with several methods for handling missing data in the context of network analysis. The package focuses on estimating psychological networks using **neighborhood selection** with **information criteria** for model selection in node-wise regressions. Furthemore, as of version 0.2.0, the package also supports network estimation based on **regularization techniques** in combination with **information criteria** for model selection. Both functionalities are available for datasets with and without missing values.
 
 ## Installation
 
@@ -45,39 +45,58 @@ After installation the easiest way to get an overview of functions and capabilit
 
 ## Features
 
-As already described, the package currently focuses on network estimation using **neighborhood selection** with **information criteria** for model selection in node-wise regressions. This functionality is available for both complete and incomplete data.
+As described above, the package currently implements two of the many approaches for estimating network structures:
 
-For datasets with missing values, two modern missing approaches are implemented:
+- **Neighborhood selection**: This approach is based on node-wise regressions with information criteria for model selection. Each node is used once as a dependent variable, while all other nodes serve as potential predictors. For each node, the best set of predictors is selected using an information criterion. The resulting regression weights are then combined to obtain partial correlations between nodes.
+- **Regularization**: This approach relies on penalized maximum likelihood estimation of the (inverse) covariance matrix. Through appropriate penalty parameters, some entries of the estimated inverse covariance matrix are shrunk to zero, which in turn yields zeros in the partial correlation matrix and therefore a sparse network structure. Multiple values of the penalty parameter are evaluated, and information criteria are used to select the optimal penalization.
+
+For data sets with missing values, two modern missing approaches are implemented:
 
 - **Two-step Expectation-Maximization (EM):** A fast method that estimates the correlation matrix via an EM algorithm using the `lavaan` package. It performs well when the sample size is very large relative to the amount of missingness and the complexity of the network.
 - **Stacked Multiple Imputation (MI):** A more robust approach across a wider range of sample sizes. Multiple imputation is performed using predictive mean matching (PMM) with the `mice` package. The imputed data sets are stacked into a single data set, and a correlation matrix is estimated from this combined data.
 
-Both methods produce a correlation matrix that is then used to estimate the network via node-wise regressions. It is also possible to compute the correlation matrix using pairwise or listwise deletion. However, these methods are generally not recommended, except in specific cases, such as when data are missing completely at random and the proportion of missingness is very small.
+Both methods produce a correlation matrix that is then used for network estimation. It is also possible to compute the correlation matrix using pairwise or listwise deletion. However, these methods are generally not recommended, except in specific cases (e.g., when data are missing completely at random and the proportion of missingness is very small). By default, correlations are computed using Pearson correlations. However, with complete data, listwise deletion, or the stacked MI approach, users may choose to treat variables as ordered categorical, in which case polychoric and polyserial correlations are computed where appropriate. This option is particularly advisable when variables have a low number of categories or exhibit noticeable non-normality. At the same time, estimating polychoric and polyserial correlations requires a sufficiently large number of observations relative to the number of variables to ensure stable and reliable estimates.
 
 In addition to network estimation, the package also supports **stepwise regression search** based on information criteria for a **single dependent variable**. This regression search is available for both complete and incomplete data and relies on the same two-step EM or stacked MI procedures to handle missing values as the network analysis.  While both methods to handle missingness are expected to perform well in this context, no specific simulation study has been conducted to compare their effectiveness for single regression modeling, and thus their relative strengths remain an open question.
 
-## Example
+## Examples
 
-The package includes two dummy datasets that resemble a typical psychological dataset, where the number of observations is considerably larger than the number of variables. Although the variables have descriptive names, these are included solely to make the examples more engaging - the data themselves are **fully synthetic**.
+The package includes dummy datasets that resemble a typical psychological dataset, where the number of observations is considerably larger than the number of variables. Although the variables have descriptive names, these are included solely to make the examples more engaging - the data themselves are **fully synthetic**.
 
-- `mantar_dummy_full`: Fully observed data (no missing values)
-- `mantar_dummy_mis`: Data with missing values
+Three data sets without missing values are included:
+- `mantar_dummy_full_cont`: Fully observed data (no missing values)
+- `mantar_dummy_full_cat`: Fully observed data with ordered categorical variables
+- `mantar_dummy_full_mix`: Fully observed data with a mix of continuous and ordered categorical variables
+
+Additionally, three data sets with missing values are provided:
+- `mantar_dummy_mis_cont`: Data with approximately 30% missing values in each
+  continuous variable
+- `mantar_dummy_mis_cat`: Data with approximately 25% missing values in each
+  ordered categorical variable
+- `mantar_dummy_mis_mix`: Data with approximately 25% missing values in each
+  variable, with a mix of continuous and ordered categorical variables
 
 These data sets are intended for examples and testing only.
 
 ```{r example}
 library(mantar)
 
-# Load example data
-data(mantar_dummy_full)
-data(mantar_dummy_mis)
+# Load some example data sets for the ReadMe
+data(mantar_dummy_full_cont)
+data(mantar_dummy_full_cat)
+data(mantar_dummy_mis_cont)
 
-# Preview the first few rows
-head(mantar_dummy_full)
-head(mantar_dummy_mis)
+# Preview the first few rows of these data sets
+head(mantar_dummy_full_cont)
+head(mantar_dummy_full_cat)
+head(mantar_dummy_mis_cont)
 ```
 
-The main function for estimating a network is `neighborhood_net()`. In the case of fully observed data, the function takes the dataset as input and estimates a network structure using **neighborhood selection** guided by **information criteria**. With default arguments, only the dataset needs to be provided.
+First, we will present an example of network estimation using the `neighborhood_net()` function for a data set without missing values. Following that, we will illustrate how to estimate a network when the data contains missing values. Then, we will briefly demonstrate how to perform a network analysis using regularization techniques with the `regularization_net()` function. 
+
+### Network Estimation via Neighborhood Selection
+
+The `neighborhood_net()` function estimates a network structure based on neighborhood selection using information criteria for model selection in node-wise regressions. The function can either be provided with raw data (data frame or matrix) or a correlation matrix along with sample sizes for each variable. The examples will use raw data, as this is the more complex case. The following arguments are particularly relevant for controlling the network estimation process (with fully observed data):
 
 #### Information Criteria
 
@@ -111,29 +130,48 @@ Based on these specifications, the function applies the appropriate correlation 
 - one `TRUE` and one `FALSE`: **polyserial correlation**  
 - both `TRUE`: **polychoric correlation**  
 
-The default is `"adapted"`, which automatically determines whether each variable is treated as ordered categorical. In this mode, the procedure:  
-1. Checks the ratio of available observations (excluding missing values) to the number of variables. If this ratio is small, all variables are set to `FALSE` (continuous), as preliminary simulations showed this can reduce bias.  
-2. If the ratio is sufficiently high, variables with more than seven categories are treated as continuous (`FALSE`), while all others are treated as ordered categorical (`TRUE`).  
 
-Note that `"adapted"` can only be provided as a single value (not as a vector) and therefore applies to all variables simultaneously or not at all.
+#### Estimation with Continuous Complete Data
 
-
-
-### Example of Network Estimation without Missing Data
+After discussing the key arguments, we can now illustrate how to estimate a network structure using the `neighborhood_net()` function with a data set without missing values.
 
 ```{r example_network}
-# Estimate network from full data set using BIC, the and rule as well as an adapted correlation type
-result <- neighborhood_net(data = mantar_dummy_full, 
-                           k = "log(n)", 
+# Estimate network from full data set using BIC, the and rule as well as treating the data as continuous
+result_full_cont <- neighborhood_net(data = mantar_dummy_full_cont, 
+                                             k = "log(n)", 
                            pcor_merge_rule = "and",
-                           ordered = "adapted")
+                           ordered = FALSE)
+
 # View estimated partial correlations
-result
+result_full_cont
 
 # Create and view a summary of the network estimation
-sum_result <- summary(result)
-sum_result
+sum_result_full_cont <- summary(result_full_cont)
+sum_result_full_cont
 ```
+
+
+#### Estimation with Ordered Categorical Complete Data
+
+We can also estimate a network structure when some variables are ordered categorical. In the following example, we treat all variables as ordered categorical.
+
+```{r example_network_ord}
+# Estimate network from full data set using BIC, the and rule as well as treating the
+# data as ordered categorical
+result_full_cat <- neighborhood_net(data = mantar_dummy_full_cat,
+                                    k = "log(n)", 
+                                    pcor_merge_rule = "and",
+                                    ordered = TRUE)
+
+# View estimated partial correlations
+result_full_cat
+
+# Create and view a summary of the network estimation
+sum_result_full_cat <- summary(result_full_cat)
+sum_result_full_cat
+```
+The standard output does not differ between the continuous and ordered categorical cases.
+
 
 
 In the case of missing data, the `neighborhood_net()` function offers several additional arguments that control how sample size and missingness are handled.
@@ -147,33 +185,148 @@ The available options are:
 - `"individual"` *(default)*: Uses the number of non-missing observations for each individual variable. This is the recommended approach.
 - `"average"`: Uses the average number of non-missing observations across all variables.
 - `"max"`: Uses the maximum number of non-missing observations across all variables.
-- `"total"`: Uses the total number of observations in the dataset (i.e., the number of rows).
+- `"total"`: Uses the total number of observations in the data set (i.e., the number of rows).
 
 #### Handling Missing Data
 
 The `missing_handling` argument specifies how the correlation matrix is estimated when the input data contains missing values. Two approaches are supported:
 
-- `"two-step-em"`: Applies a standard **Expectation-Maximization (EM)** algorithm to estimate the covariance matrix.
+- `"two-step-em"`: Applies a standard **Expectation-Maximization (EM)** algorithm to estimate the covariance matrix. This method is the default as it is computationally efficient. However, it only performs well when the sample size is large relative to the amount of edges in the network and the proportion of missingness.
 - `"stacked-mi"`: Applies **multiple imputation** to create several completed datasets, which are then stacked into a single dataset. A correlation matrix is computed from this stacked data. 
 
-As described previously, deletion techniques (listwise and pairwise) are also available, but their use is not recommended. When `"two-step-em"` is selected, the correlation matrix is always based on Pearson correlations. 
+As described previously, deletion techniques (listwise and pairwise) are also available, but their use is not recommended. When `"two-step-em"` is selected, the correlation matrix is always based on Pearson correlations, regardless of the `ordered` argument. In contrast, when `"stacked-mi"` is used, the `ordered` argument determines how variables are treated (continuous vs. ordered categorical) during the correlation estimation.
 
 If `"stacked-mi"` is used, the `nimp` argument controls the number of imputations (default: `20`), while `imp_method` specifies the imputation method (default: `"pmm"` for predictive mean matching).  
 
 
-### Example of Network Estimation with Missing Data
+#### Estimation with Missing Data
+
+We can now illustrate how to estimate a network structure using the `neighborhood_net()` function with a data set that contains missing values. All variables are continuous in this example.
 
 ```{r example_network_mis}
 # Estimate network for data set with missing values
-result_mis <- neighborhood_net(data = mantar_dummy_mis, 
-                                n_calc = "individual", 
-                                missing_handling = "two-step-em",
-                                pcor_merge_rule = "and",
-                                ordered = "adapted")
+result_mis_cont <- neighborhood_net(data = mantar_dummy_mis_cont,
+                                    n_calc = "individual", 
+                                    missing_handling = "two-step-em",
+                                    pcor_merge_rule = "and")
+
 # View estimated partial correlations
-result_mis
+result_mis_cont
 
 # Create and view a summary of the network estimation
-sum_result_mis <- summary(result_mis)
-sum_result_mis
+sum_result_mis_cont <- summary(result_mis_cont)
+sum_result_mis_cont
+```
+
+The output does not differ much from the complete data cased, only offering additional information about how missingness was handled. Additionally, due to the `n_calc` argument being set to `individual`, the sample sizes for each variable may differ.
+
+
+### Network Estimation via Regularization
+
+The `regularization_net()` function estimates a network structure based on regularization techniques using information criteria for model selection. Similar to `neighborhood_net()`, this function can either be provided with raw data (data frame or matrix) or a correlation matrix along with sample sizes for each variable. The examples will use raw data, as this is the more complex case. The following arguments are particularly relevant for controlling the network estimation process (with fully observed data):
+
+#### Type of Regularization Penalty and corresponding Parameters
+
+The `penalty` argument controls the type of regularization used in the network estimation. The recommended options are using the graphical lasso (`"glasso"`) as a convex penalty or `"atan"` as a non-convex penalty.
+
+For `glasso`, the `lambda_min_ratio` and `n_lambdas` arguments control the range and number of penalty parameters evaluated during model selection. The default values are generally appropriate. For all nonconvex penalties (e.g., `"atan"`), there is the option to specify an additional parameter via the `gamma` argument. However, just using one default value (default value is different for different penalty types) for `gamma`, by setting the argument `vary = "lambda"` is sufficient. 
+
+The last argument controlling the regularization process is `pen_diag` which specifies whether the diagonal elements of the covariance matrix should be penalized (`TRUE`) or not (`FALSE`, default). 
+
+#### Information Criteria
+
+The `k` argument controls the penalty used in model selection for the regularization process. It reflects the penalty per parameter (in this case for every included edge / nonzero partial correlation). The default value is `k = "log(n)"`, which corresponds to the **Bayesian Information Criterion (BIC)**. Another option is `k = "2"`, which corresponds to the **Akaike Information Criterion (AIC)**. The function also offers using the extended version of the information criteria via `extended = TRUE` (especially helpful to specify extended BIC). In this case, an additional parameter `extended_gamma` can be specified (default: `0.5`). The default of `extended` depends on the penalty type as the `"glasso"` penalty generally does generally use the extended version, while non-convex penalties do not.
+
+#### Type of Correlation
+
+The `ordered` argument specifies how variables are treated when estimating correlations from raw data. 
+
+- **Global specification:**  
+  - `ordered = TRUE`: all variables are treated as ordered categorical  
+  - `ordered = FALSE`: all variables are treated as continuous  
+- **Variable-specific specification:**  
+  - A logical vector of length equal to the number of variables can be supplied to indicate which variables are treated as ordered categorical (e.g., `ordered = c(TRUE, FALSE, FALSE, TRUE)`).  
+- If a global specification is used, the function automatically creates a vector of this value with the same length as the number of variables.  
+
+Based on these specifications, the function applies the appropriate correlation type for each pair of variables:  
+- both `FALSE`: **Pearson correlation**  
+- one `TRUE` and one `FALSE`: **polyserial correlation**  
+- both `TRUE`: **polychoric correlation**  
+
+#### Estimation with Continuous Complete Data
+
+After discussing the key arguments, we can now illustrate how to estimate a network structure using the `regularization_net()` function with a data set without missing values.
+
+```{r example_reg_network}
+# Estimate network from full data set using BIC and the glasso penalty
+result_full_cont <- regularization_net(data = mantar_dummy_full_cont,
+                                      penalty = "glasso",
+                                      vary = "lambda",
+                                      n_lambda = 100,
+                                      lambda_min_ratio = 0.1,
+                                      k = "log(n)",
+                                      extended = TRUE, 
+                                      extended_gamma = 0.5,
+                                      pcor_merge_rule = "and",
+                                      ordered = FALSE)
+
+# View estimated partial correlations
+result_full_cont
+
+# Create and view a summary of the network estimation
+sum_result_full_cont <- summary(result_full_cont)
+sum_result_full_cont
+```
+
+
+With missing data, the `regularization_net()` function offers several additional arguments that control how sample size, information criteria computation and missingness are handled. 
+
+#### Calculation of Sample Size for Information Criteria
+
+The `n_calc` argument specifies how the sample size is calculated for the information criteria computation. Only one value is needed here, as the regularization approach does not rely on node-wise regressions. The default input is `"average"`, which uses the average number of non-missing observations for all estimated correlations - this includes the correlations of variables with themselves. Ignoring these correlations (i.e., using the average number of non-missing observations across different variables only) is also possible with setting `count_diagonal` to `FALSE`. 
+
+Within the information criteria computation, the likelihood for the candidate models has to be computed. The `likelihood` argument controls how this is done:
+
+- `"mat_based"` (default): The likelihood is computed based on the sample correlation matrix.
+- `"obs_based"`: The likelihood is computed based on the observed data. This option is only available when the raw input data contains no ordered categorical variables. In these cases, the observed data log-likelihood is recommended as it is a better representation of the sample data than using the sample correlation matrix.
+
+These options to compute the likelihood are also available with full data. However, they return the exact same results in this case.
+
+#### Handling Missing Data
+
+The `missing_handling` argument specifies how the correlation matrix is estimated when the input data contains missing values. Two approaches are supported:
+
+- `"two-step-em"`: Applies a standard **Expectation-Maximization (EM)** algorithm to estimate the covariance matrix. This method is the default as it is computationally efficient. However, it only performs well when the sample size is large relative to the amount of edges in the network and the proportion of missingness.
+- `"stacked-mi"`: Applies **multiple imputation** to create several completed datasets, which are then stacked into a single data set. A correlation matrix is computed from this stacked data.
+  
+As described previously, deletion techniques (listwise and pairwise) are also available, but their use is not recommended. When `"two-step-em"` is selected, the correlation matrix is always based on Pearson correlations, regardless of the `ordered` argument. In contrast, when `"stacked-mi"` is used, the `ordered` argument determines how variables are treated (continuous vs. ordered categorical) during the correlation estimation.
+
+If `"stacked-mi"` is used, the `nimp` argument controls the number of imputations (default: `20`), while `imp_method` specifies the imputation method (default: `"pmm"` for predictive mean matching).
+
+#### Estimation with Missing Data
+
+We can now illustrate how to estimate a network structure using the `regularization_net()` function with a data set that contains missing values. All variables are continuous in this example.
+
+```{r example_reg_network_mis}
+# Estimate network for data set with missing values
+result_mis_cont <- regularization_net(data = mantar_dummy_mis_cont,
+                                      likelihood = "obs_based",
+                                     penalty = "glasso",
+                                     vary = "lambda",
+                                     n_lambda = 100,
+                                     lambda_min_ratio = 0.1,
+                                     k = "log(n)",
+                                     extended = TRUE,
+                                     extended_gamma = 0.5,
+                                     n_calc = "average",
+                                     missing_handling = "two-step-em",
+                                     pcor_merge_rule = "and",
+                                     ordered = FALSE)
+
+# View estimated partial correlations
+result_mis_cont
+
+# Create and view a summary of the network estimation
+sum_result_mis_cont <- summary(result_mis_cont)
+sum_result_mis_cont
 ```

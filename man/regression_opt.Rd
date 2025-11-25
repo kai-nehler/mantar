@@ -2,7 +2,7 @@
 % Please edit documentation in R/search_regression.R
 \name{regression_opt}
 \alias{regression_opt}
-\title{Stepwise Multiple Regression Search based on Information Criteria}
+\title{Stepwise Multiple Regression Model Search based on Information Criteria}
 \usage{
 regression_opt(
   data = NULL,
@@ -11,7 +11,7 @@ regression_opt(
   dep_ind,
   n_calc = "individual",
   k = "log(n)",
-  ordered = "adapted",
+  ordered = FALSE,
   missing_handling = "stacked-mi",
   nimp = 20,
   imp_method = "pmm",
@@ -19,41 +19,61 @@ regression_opt(
 )
 }
 \arguments{
-\item{data}{Raw data containing only the variables to be tested within the multiple regression as dependent or independent variable. May include missing values.}
+\item{data}{Raw data matrix or data frame containing the variables to be
+included in the regression models. May include missing values. If \code{data} is
+\code{NULL}, a covariance or correlation matrix must be supplied in \code{mat}.}
 
-\item{n}{Numeric value specifying the sample size used in calculating information criteria for model search.
-If not provided, it will be computed based on the data.
-If a correlation matrix (\code{mat}) is supplied instead of raw data, \code{n} must be provided.}
+\item{n}{Numeric value specifying the sample size used in calculating the
+information criteria. If not provided, it is derived from \code{data}. When \code{mat}
+is supplied instead of raw data, \code{n} must be provided.}
 
-\item{mat}{Optional covariance or correlation matrix for the variables to be used within the multiple regression.
-#' Used only if \code{data} is \code{NULL}.}
+\item{mat}{Optional covariance or correlation matrix for the variables to be
+included in the regression. Used only when \code{data} is \code{NULL}.}
 
-\item{dep_ind}{Index of the column within a data set to be used as dependent variable within in the regression model.}
+\item{dep_ind}{Index of the column in \code{data} to be used as the dependent
+variable in the regression model.}
 
-\item{n_calc}{Method for calculating the sample size for node-wise regression models. Can be one of:
-\code{"individual"} (sample size for each variable is the number of non-missing observations for that variable),
-\code{"average"} (sample size is the average number of non-missing observations across all variables),
-\code{"max"} (sample size is the maximum number of non-missing observations across all variables),
-\code{"total"} (sample size is the total number of observations across in the data set / number of rows).}
+\item{n_calc}{Character string specifying how the sample size is calculated
+when \code{n} is not provided. Possible values are:
+\describe{
+\item{\code{"individual"}}{Uses the number of non-missing observations for the
+variable used as the dependent variable.}
+\item{\code{"average"}}{Uses the average number of non-missing observations
+across all variables.}
+\item{\code{"max"}}{Uses the maximum number of non-missing observations across
+all variables.}
+\item{\code{"total"}}{Uses the total number of rows in \code{data}.}
+}}
 
-\item{k}{Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be \code{k = 2}.}
+\item{k}{Penalty per parameter (number of predictors + 1) used in the
+information criterion. The default \code{k = "log(n)"} corresponds to the
+classical BIC. Setting \code{k = 2} yields the classical AIC.}
 
-\item{ordered}{Specifies whether variables should be treated as ordered categorical when determining correlations.
-Options are \code{TRUE}, \code{FALSE}, or \code{"adapted"}. The argument can be provided as a single value
-(applied to all variables) or as a vector of length equal to the number of variables (using only \code{TRUE} and \code{FALSE}),
-allowing mixed specifications. With the default \code{"adapted"}, the treatment of each variable is determined according to
-guidelines from preliminary simulations (considering the number of cases, number of variables,
-and number of categories). See the \emph{Details} section of \code{\link[=cor_calc]{cor_calc()}} for further elaboration.}
+\item{ordered}{Logical vector indicating whether each variable in \code{data}
+should be treated as ordered categorical when computing the correlation
+matrix. If a single logical value is supplied, it is recycled to all
+variables. Only used when \code{data} is provided.}
 
-\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
-\code{"tow-step-em"} uses a classic EM algorithm to estimate the correlation matrix from the data.
-\code{"stacked-mi"} uses multiple imputation to estimate the correlation matrix from the data.
-\code{"pairwise"} uses pairwise deletion to estimate the correlation matrix from the data.
-\code{"listwise"} uses listwise deletion to estimate the correlation matrix from the data.}
+\item{missing_handling}{Character string specifying how the correlation
+matrix is estimated from \code{data} in the presence of missing values. Possible
+values are:
+\describe{
+\item{\code{"two-step-em"}}{Uses a classical EM algorithm to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"stacked-mi"}}{Uses stacked multiple imputation to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"pairwise"}}{Uses pairwise deletion to compute correlations from
+\code{data}.}
+\item{\code{"listwise"}}{Uses listwise deletion to compute correlations from
+\code{data}.}
+}}
 
-\item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
+\item{nimp}{Number of imputations (default: 20) to be used when
+\code{missing_handling = "stacked-mi"}.}
 
-\item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
+\item{imp_method}{Character string specifying the imputation method to be
+used when \code{missing_handling = "stacked-mi"} (default: \code{"pmm"} - predictive
+mean matching).}
 
 \item{...}{Further arguments passed to internal functions.}
 }
@@ -67,13 +87,26 @@ A list with the following elements:
 }
 }
 \description{
-Stepwise Multiple Regression Search based on Information Criteria
+Performs stepwise model selection for multiple regression using information
+criteria to identify the optimal regression model.
+}
+\details{
+This function performs stepwise model selection for multiple regression
+using information criteria. It was originally developed as a component of
+the neighborhood selection framework for network estimation
+\insertCite{nehler.2024}{mantar}, where each node-wise regression model is
+selected individually. However, the procedure can also be used as a
+standalone tool for exploratory regression model search, particularly in
+settings with missing data. Unlike standard stepwise regression functions,
+this implementation explicitly supports missing-data handling strategies,
+making it suitable for situations in which classical methods fail or produce
+biased results.
 }
 \examples{
 # For full data using AIC
 # First variable of the data set as dependent variable
 result <- regression_opt(
-  data = mantar_dummy_full,
+  data = mantar_dummy_full_cont,
   dep_ind = 1,
   k = "2"
 )
@@ -87,7 +120,7 @@ result$R2
 # Using individual sample size of the dependent variable and stacked Multiple Imputation
 
 result_mis <- regression_opt(
- data = mantar_dummy_mis,
+ data = mantar_dummy_mis_cont,
  dep_ind = 2,
  n_calc = "individual",
  missing_handling = "two-step-em",

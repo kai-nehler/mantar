@@ -1,6 +1,8 @@
+#### Tests for regression_opt() ----
+
 test_that("regression_opt() works with full data and AIC", {
   result <- regression_opt(
-    data = mantar_dummy_full,
+    data = mantar_dummy_full_cont,
     dep_ind = 1,
     k = "2"
   )
@@ -14,7 +16,7 @@ test_that("regression_opt() works with full data and AIC", {
 
 test_that("regression_opt() works with data with two-step EM missingness and BIC", {
   result_mis <- regression_opt(
-   data = mantar_dummy_mis,
+   data = mantar_dummy_mis_cont,
    dep_ind = 2,
    n_calc = "individual",
    missing_handling = "two-step-em",
@@ -29,7 +31,7 @@ test_that("regression_opt() works with data with two-step EM missingness and BIC
 
 test_that("regression_opt() works with data with stacked MI missingness and BIC", {
   result_mis <- regression_opt(
-    data = mantar_dummy_mis,
+    data = mantar_dummy_mis_cont,
     dep_ind = 2,
     n_calc = "individual",
     missing_handling = "stacked-mi",
@@ -41,34 +43,79 @@ test_that("regression_opt() works with data with stacked MI missingness and BIC"
   expect_type(result_mis$R2, "double")
 })
 
-test_that("pred search works for correct specification", {
-  mat <- cor(mantar_dummy_full)
-  n <- nrow(mantar_dummy_full)  # sample size for IC calculation
 
-  # Set dependent variable to be the first column
-  dep_ind <- 1
-  possible_pred_ind <- setdiff(seq_len(ncol(mat)), dep_ind)
+test_that("regression_opt() works when mat and n are supplied", {
+  mat <- stats::cov(mantar_dummy_full_cont)
+  n   <- nrow(mantar_dummy_full_cont)
 
-  # Run pred_search
-  res <- pred_search(
+  res <- regression_opt(
     mat = mat,
-    dep_ind = dep_ind,
-    possible_pred_ind = possible_pred_ind,
-    n = n,
-    k = "log(n)"  # BIC penalty
+    n   = n,
+    dep_ind = 1
   )
 
-  # Basic structure checks
-  expect_type(res, "list")
-  expect_named(res, c("actual_preds", "actual_betas", "actual_resid_var", "best_IC"), ignore.order = TRUE)
+  expect_s3_class(res, "mantar_regression")
+  expect_named(res, c("regression", "R2", "n", "args"))
+  expect_equal(res$n, n)
 
-  # Predictors and betas must match in length
-  expect_equal(length(res$actual_preds), length(res$actual_betas))
+  expect_type(res$regression, "double")
+  expect_true(length(res$regression) >= 0)
 
-  # IC must be numeric
-  expect_type(res$best_IC, "double")
+  # args sollten die richtigen/neutralisierten Werte enthalten
+  expect_equal(res$args$k, "log(n)")
+  expect_null(res$args$cor_method)
+  expect_null(res$args$missing_handling)
+  expect_null(res$args$nimp)
+  expect_null(res$args$imp_method)
 })
 
+
+
+
+test_that("regression_opt() accepts dep_ind as column name", {
+  dep_name <- colnames(mantar_dummy_full_cont)[1]
+
+  res_index <- regression_opt(
+    data   = mantar_dummy_full_cont,
+    dep_ind = 1,
+    k = "2"
+  )
+
+  res_name <- regression_opt(
+    data   = mantar_dummy_full_cont,
+    dep_ind = dep_name,
+    k = "2"
+  )
+
+  # gleiche Regressionsergebnisse erwartet
+  expect_equal(res_index$regression, res_name$regression)
+  expect_equal(res_index$R2, res_name$R2)
+  expect_equal(res_index$n, res_name$n)
+})
+
+test_that("regression_opt() errors for invalid dep_ind specifications", {
+  expect_error(
+    regression_opt(
+      data   = mantar_dummy_full_cont,
+      dep_ind = "not_a_column"
+    ),
+    "dep_ind must be a valid column name.",
+    fixed = TRUE
+  )
+
+  mat <- stats::cov(mantar_dummy_full_cont)
+  n   <- nrow(mantar_dummy_full_cont)
+
+  expect_error(
+    regression_opt(
+      mat = mat,
+      n   = n,
+      dep_ind = 0
+    ),
+    "dep_ind must be a valid column index.",
+    fixed = TRUE
+  )
+})
 
 test_that("errors in regression optimization work for mat input", {
   # Test with incorrect mat type
@@ -96,17 +143,71 @@ test_that("errors in regression optimization work for mat input", {
 
 test_that("errors in regression optimization work for data input", {
   expect_error(regression_opt(
-    data =  cbind(mantar_dummy_full, rep("a", nrow(mantar_dummy_full))),  # non-numeric matrix
+    data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
     dep_ind = 1,
     n = 100,
     k = "log(n)"
   ), "All variables in 'data' must be numeric.")
 
   expect_error(regression_opt(
-    data =  cbind(mantar_dummy_full, rep("a", nrow(mantar_dummy_full))),  # non-numeric matrix
+    data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
     dep_ind = 1,
     mat = matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow =3),
     n = 100,
     k = "log(n)"
   ), "All variables in 'data' must be numeric.")
+})
+
+
+#### Tests for pred_search() ----
+test_that("pred search works for correct specification", {
+  mat <- cor(mantar_dummy_full_cont)
+  n <- nrow(mantar_dummy_full_cont)  # sample size for IC calculation
+
+  # Set dependent variable to be the first column
+  dep_ind <- 1
+  possible_pred_ind <- setdiff(seq_len(ncol(mat)), dep_ind)
+
+  # Run pred_search
+  res <- pred_search(
+    mat = mat,
+    dep_ind = dep_ind,
+    possible_pred_ind = possible_pred_ind,
+    n = n,
+    k = "log(n)"  # BIC penalty
+  )
+
+  # Basic structure checks
+  expect_type(res, "list")
+  expect_named(res, c("actual_preds", "actual_betas", "actual_resid_var", "best_IC"), ignore.order = TRUE)
+
+  # Predictors and betas must match in length
+  expect_equal(length(res$actual_preds), length(res$actual_betas))
+
+  # IC must be numeric
+  expect_type(res$best_IC, "double")
+})
+
+
+test_that("pred_search() keeps null model when predictors do not improve IC", {
+  mat <- diag(3)
+  n   <- 100
+
+  res <- pred_search(
+    mat = mat,
+    dep_ind = 1,
+    possible_pred_ind = 2:3,
+    n = n,
+    k = log(n)  # hier wirklich numerisch verwenden
+  )
+
+  # Keine Prädiktoren im besten Modell
+  expect_equal(length(res$actual_preds), 0)
+  expect_equal(length(res$actual_betas), 0)
+
+  # Residualvarianz sollte der Varianz der abhängigen Variable entsprechen (1)
+  expect_equal(res$actual_resid_var, 1)
+
+  # IC sollte dem Nullmodell entsprechen – hier nur Typ checken
+  expect_type(res$best_IC, "double")
 })

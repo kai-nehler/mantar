@@ -8,8 +8,13 @@ Description: Functionality for estimating network structures while accounting fo
 License: GPL (>= 3)
 Depends: R (>= 4.1.0)
 Imports: 
-    stats
+    Rdpack,
+    mathjaxr,
+    stats,
+    Matrix,
+    glassoFast
 Suggests:
+    numDeriv,
     mice,
     lavaan,
     qgraph,
@@ -17,7 +22,10 @@ Suggests:
 LazyData: true
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
+RdMacros: 
+    Rdpack,
+    mathjaxr
 Config/testthat/edition: 3
 URL: https://github.com/kai-nehler/mantar
 BugReports: https://github.com/kai-nehler/mantar/issues

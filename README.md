@@ -83,14 +83,16 @@ relative strengths remain an open question.
 
 ## Example
 
-The package includes two dummy datasets that resemble a typical
+The package includes dummy datasets that resemble a typical
 psychological dataset, where the number of observations is considerably
 larger than the number of variables. Although the variables have
 descriptive names, these are included solely to make the examples more
 engaging - the data themselves are **fully synthetic**.
 
-- `mantar_dummy_full`: Fully observed data (no missing values)
-- `mantar_dummy_mis`: Data with missing values
+- `mantar_dummy_full_cont`: Fully observed data (no missing values)
+- `mantar_dummy_mis_cont`: Data with missing values
+- `mantar_dummy_full_cat`: Fully observed data with categorical
+  variables
 
 These data sets are intended for examples and testing only.
 
@@ -98,11 +100,12 @@ These data sets are intended for examples and testing only.
 library(mantar)
 
 # Load example data
-data(mantar_dummy_full)
-data(mantar_dummy_mis)
+data(mantar_dummy_full_cont)
+data(mantar_dummy_mis_cont)
+data(mantar_dummy_full_cat)
 
 # Preview the first few rows
-head(mantar_dummy_full)
+head(mantar_dummy_full_cont)
 #>   EmoReactivity  TendWorry StressSens  SelfAware  Moodiness    Cautious
 #> 1   -0.08824641 -0.2659269 -1.2036137 -2.3499259  0.6693700  0.04102854
 #> 2   -0.44657803 -0.4588384 -0.2431794 -0.1656722 -0.3361568  0.88919849
@@ -117,7 +120,7 @@ head(mantar_dummy_full)
 #> 4    -0.4702988    0.34653985
 #> 5     0.9503597    0.82981174
 #> 6    -0.8938618   -0.01593388
-head(mantar_dummy_mis)
+head(mantar_dummy_mis_cont)
 #>   EmoReactivity  TendWorry StressSens   SelfAware  Moodiness    Cautious
 #> 1    -1.7551632 -0.4376210 -0.5774722  0.10562820  0.6614044          NA
 #> 2    -1.7551688 -0.7039623  0.9070330  0.03418623  0.6140406  0.83879818
@@ -132,6 +135,21 @@ head(mantar_dummy_mis)
 #> 4    -0.7100126    0.80773402
 #> 5     1.0583312    0.20820252
 #> 6            NA   -0.03915726
+head(mantar_dummy_full_cat)
+#>   EmoReactivity TendWorry StressSens SelfAware Moodiness Cautious ThoughtFuture
+#> 1             3         3          2         1         4        3             4
+#> 2             3         3          3         3         3        4             4
+#> 3             2         2          3         2         4        4             2
+#> 4             4         3          2         5         3        3             3
+#> 5             4         4          3         5         4        5             4
+#> 6             4         4          2         2         5        3             3
+#>   RespCriticism
+#> 1             3
+#> 2             3
+#> 3             4
+#> 4             4
+#> 5             4
+#> 6             3
 ```
 
 The main function for estimating a network is `neighborhood_net()`. In
@@ -187,30 +205,14 @@ correlation type for each pair of variables:
 - one `TRUE` and one `FALSE`: **polyserial correlation**  
 - both `TRUE`: **polychoric correlation**
 
-The default is `"adapted"`, which automatically determines whether each
-variable is treated as ordered categorical. In this mode, the
-procedure:  
-1. Checks the ratio of available observations (excluding missing values)
-to the number of variables. If this ratio is small, all variables are
-set to `FALSE` (continuous), as preliminary simulations showed this can
-reduce bias.  
-2. If the ratio is sufficiently high, variables with more than seven
-categories are treated as continuous (`FALSE`), while all others are
-treated as ordered categorical (`TRUE`).
-
-Note that `"adapted"` can only be provided as a single value (not as a
-vector) and therefore applies to all variables simultaneously or not at
-all.
-
 ### Example of Network Estimation without Missing Data
 
 ``` r
-# Estimate network from full data set using BIC, the and rule as well as an adapted correlation type
-result <- neighborhood_net(data = mantar_dummy_full, 
+# Estimate network from full data set using BIC, the and rule as well as treating the data as continuous
+result <- neighborhood_net(data = mantar_dummy_full_cont, 
                            k = "log(n)", 
                            pcor_merge_rule = "and",
-                           ordered = "adapted")
-#> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
+                           ordered = FALSE)
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 # View estimated partial correlations
 result
@@ -238,8 +240,10 @@ sum_result <- summary(result)
 sum_result
 #> The density of the estimated network is 0.250
 #> 
-#> Network was estimated using neighborhood selection with a penalty term of log(n)
-#> and the 'and' rule for the inclusion of edges based on a full data set.
+#> Network was estimated using neighborhood selection on data with missing values.
+#> Missing data were handled using 'two-step-em'.
+#> Stacked multiple imputation was performed with 20 imputations.
+#> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
 #> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
@@ -295,30 +299,28 @@ method (default: `"pmm"` for predictive mean matching).
 
 ``` r
 # Estimate network for data set with missing values
-result_mis <- neighborhood_net(data = mantar_dummy_mis, 
+result_mis <- neighborhood_net(data = mantar_dummy_mis_cont, 
                                 n_calc = "individual", 
                                 missing_handling = "two-step-em",
-                                pcor_merge_rule = "and",
-                                ordered = "adapted")
-#> Using the 'pearson' correlation method because the number of distinct values suggests continuous variables.
+                                pcor_merge_rule = "and")
 # View estimated partial correlations
 result_mis
 #>               EmoReactivity TendWorry StressSens SelfAware Moodiness  Cautious
-#> EmoReactivity     0.0000000 0.1295824   0.230612 0.0000000 0.0000000 0.0000000
-#> TendWorry         0.1295824 0.0000000   0.000000 0.2515697 0.0000000 0.0000000
-#> StressSens        0.2306120 0.0000000   0.000000 0.0000000 0.0000000 0.0000000
-#> SelfAware         0.0000000 0.2515697   0.000000 0.0000000 0.0000000 0.0000000
-#> Moodiness         0.0000000 0.0000000   0.000000 0.0000000 0.0000000 0.4768098
-#> Cautious          0.0000000 0.0000000   0.000000 0.0000000 0.4768098 0.0000000
-#> ThoughtFuture     0.1446363 0.2991518   0.000000 0.0000000 0.0000000 0.0000000
-#> RespCriticism     0.0000000 0.0000000   0.000000 0.3008107 0.1930326 0.2210164
+#> EmoReactivity     0.0000000 0.0000000  0.1947561 0.0000000 0.0000000 0.0000000
+#> TendWorry         0.0000000 0.0000000  0.0000000 0.2769383 0.0000000 0.1487042
+#> StressSens        0.1947561 0.0000000  0.0000000 0.0000000 0.0000000 0.0000000
+#> SelfAware         0.0000000 0.2769383  0.0000000 0.0000000 0.0000000 0.0000000
+#> Moodiness         0.0000000 0.0000000  0.0000000 0.0000000 0.0000000 0.4328186
+#> Cautious          0.0000000 0.1487042  0.0000000 0.0000000 0.4328186 0.0000000
+#> ThoughtFuture     0.2210913 0.2603475  0.0000000 0.0000000 0.0000000 0.0000000
+#> RespCriticism     0.0000000 0.0000000  0.0000000 0.2991248 0.2782289 0.1809261
 #>               ThoughtFuture RespCriticism
-#> EmoReactivity     0.1446363     0.0000000
-#> TendWorry         0.2991518     0.0000000
+#> EmoReactivity     0.2210913     0.0000000
+#> TendWorry         0.2603475     0.0000000
 #> StressSens        0.0000000     0.0000000
-#> SelfAware         0.0000000     0.3008107
-#> Moodiness         0.0000000     0.1930326
-#> Cautious          0.0000000     0.2210164
+#> SelfAware         0.0000000     0.2991248
+#> Moodiness         0.0000000     0.2782289
+#> Cautious          0.0000000     0.1809261
 #> ThoughtFuture     0.0000000     0.0000000
 #> RespCriticism     0.0000000     0.0000000
 
@@ -329,11 +331,12 @@ sum_result_mis
 #> 
 #> Network was estimated using neighborhood selection on data with missing values.
 #> Missing data were handled using 'two-step-em'.
+#> Stacked multiple imputation was performed with 20 imputations.
 #> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
 #> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
-#>           427           426           425           428           424 
+#>       280.625       280.625       280.625       280.625       280.625 
 #>      Cautious ThoughtFuture RespCriticism 
-#>           423           422           420
+#>       280.625       280.625       280.625
 ```

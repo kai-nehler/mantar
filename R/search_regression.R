@@ -1,31 +1,55 @@
-#' Stepwise Multiple Regression Search based on Information Criteria
+#' @title Stepwise Multiple Regression Model Search based on Information Criteria
 #'
-#' @param data Raw data containing only the variables to be tested within the multiple regression as dependent or independent variable. May include missing values.
-#' @param n Numeric value specifying the sample size used in calculating information criteria for model search.
-#' If not provided, it will be computed based on the data.
-#' If a correlation matrix (`mat`) is supplied instead of raw data, `n` must be provided.
-#' @param mat Optional covariance or correlation matrix for the variables to be used within the multiple regression.
-#' #' Used only if \code{data} is \code{NULL}.
-#' @param dep_ind Index of the column within a data set to be used as dependent variable within in the regression model.
-#' @param n_calc Method for calculating the sample size for node-wise regression models. Can be one of:
-#' `"individual"` (sample size for each variable is the number of non-missing observations for that variable),
-#' `"average"` (sample size is the average number of non-missing observations across all variables),
-#' `"max"` (sample size is the maximum number of non-missing observations across all variables),
-#' `"total"` (sample size is the total number of observations across in the data set / number of rows).
-#' @param k Penalty per parameter (number of predictors + 1) to be used in node-wise regressions; the default log(n) (number of observations observation) is the classical BIC. Alternatively, classical AIC would be `k = 2`.
-#' @param ordered Specifies whether variables should be treated as ordered categorical when determining correlations.
-#' Options are `TRUE`, `FALSE`, or `"adapted"`. The argument can be provided as a single value
-#' (applied to all variables) or as a vector of length equal to the number of variables (using only `TRUE` and `FALSE`),
-#' allowing mixed specifications. With the default `"adapted"`, the treatment of each variable is determined according to
-#' guidelines from preliminary simulations (considering the number of cases, number of variables,
-#' and number of categories). See the *Details* section of [cor_calc()] for further elaboration.
-#' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
-#' `"tow-step-em"` uses a classic EM algorithm to estimate the correlation matrix from the data.
-#' `"stacked-mi"` uses multiple imputation to estimate the correlation matrix from the data.
-#' `"pairwise"` uses pairwise deletion to estimate the correlation matrix from the data.
-#' `"listwise"` uses listwise deletion to estimate the correlation matrix from the data.
-#' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
-#' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
+#' @description
+#' Performs stepwise model selection for multiple regression using information
+#' criteria to identify the optimal regression model.
+#'
+#' @param data Raw data matrix or data frame containing the variables to be
+#' included in the regression models. May include missing values. If `data` is
+#' `NULL`, a covariance or correlation matrix must be supplied in `mat`.
+#' @param n Numeric value specifying the sample size used in calculating the
+#' information criteria. If not provided, it is derived from `data`. When `mat`
+#' is supplied instead of raw data, `n` must be provided.
+#' @param mat Optional covariance or correlation matrix for the variables to be
+#' included in the regression. Used only when `data` is `NULL`.
+#' @param dep_ind Index of the column in `data` to be used as the dependent
+#' variable in the regression model.
+#' @param n_calc Character string specifying how the sample size is calculated
+#' when `n` is not provided. Possible values are:
+#' \describe{
+#'   \item{`"individual"`}{Uses the number of non-missing observations for the
+#'   variable used as the dependent variable.}
+#'   \item{`"average"`}{Uses the average number of non-missing observations
+#'   across all variables.}
+#'   \item{`"max"`}{Uses the maximum number of non-missing observations across
+#'   all variables.}
+#'   \item{`"total"`}{Uses the total number of rows in `data`.}
+#' }
+#' @param k Penalty per parameter (number of predictors + 1) used in the
+#' information criterion. The default `k = "log(n)"` corresponds to the
+#' classical BIC. Setting `k = 2` yields the classical AIC.
+#' @param ordered Logical vector indicating whether each variable in `data`
+#' should be treated as ordered categorical when computing the correlation
+#' matrix. If a single logical value is supplied, it is recycled to all
+#' variables. Only used when `data` is provided.
+#' @param missing_handling Character string specifying how the correlation
+#' matrix is estimated from `data` in the presence of missing values. Possible
+#' values are:
+#' \describe{
+#'   \item{`"two-step-em"`}{Uses a classical EM algorithm to estimate the
+#'   correlation matrix from `data`.}
+#'   \item{`"stacked-mi"`}{Uses stacked multiple imputation to estimate the
+#'   correlation matrix from `data`.}
+#'   \item{`"pairwise"`}{Uses pairwise deletion to compute correlations from
+#'   `data`.}
+#'   \item{`"listwise"`}{Uses listwise deletion to compute correlations from
+#'   `data`.}
+#' }
+#' @param nimp Number of imputations (default: 20) to be used when
+#' `missing_handling = "stacked-mi"`.
+#' @param imp_method Character string specifying the imputation method to be
+#' used when `missing_handling = "stacked-mi"` (default: `"pmm"` - predictive
+#' mean matching).
 #' @param ... Further arguments passed to internal functions.
 #'
 #' @return A list with the following elements:
@@ -36,13 +60,25 @@
 #'  \item{args}{List of settings used in the regression model.}
 #'  }
 #'
+#' @details
+#' This function performs stepwise model selection for multiple regression
+#' using information criteria. It was originally developed as a component of
+#' the neighborhood selection framework for network estimation
+#' \insertCite{nehler.2024}{mantar}, where each node-wise regression model is
+#' selected individually. However, the procedure can also be used as a
+#' standalone tool for exploratory regression model search, particularly in
+#' settings with missing data. Unlike standard stepwise regression functions,
+#' this implementation explicitly supports missing-data handling strategies,
+#' making it suitable for situations in which classical methods fail or produce
+#' biased results.
+#'
 #' @export
 #'
 #' @examples
 #' # For full data using AIC
 #' # First variable of the data set as dependent variable
 #' result <- regression_opt(
-#'   data = mantar_dummy_full,
+#'   data = mantar_dummy_full_cont,
 #'   dep_ind = 1,
 #'   k = "2"
 #' )
@@ -56,7 +92,7 @@
 #' # Using individual sample size of the dependent variable and stacked Multiple Imputation
 #'
 #' result_mis <- regression_opt(
-#'  data = mantar_dummy_mis,
+#'  data = mantar_dummy_mis_cont,
 #'  dep_ind = 2,
 #'  n_calc = "individual",
 #'  missing_handling = "two-step-em",
@@ -66,23 +102,21 @@
 #'  result_mis$regression
 #'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
-                           n_calc = "individual", k = "log(n)", ordered = "adapted",
+                           n_calc = "individual", k = "log(n)", ordered = FALSE,
                            missing_handling = "stacked-mi", nimp = 20, imp_method = "pmm", ...) {
 
+  # Argument checks
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
-  # Argument ordered is valid
-
 
   # Check: Which input is provided?
   checker(data = data, mat = mat)
 
-
-
-  # Determine column names relevant for dep_ind
+  # Determine column names
   col_names <- if (!is.null(data)) colnames(data) else colnames(mat)
 
   # Resolve dep_ind to a column index
+  # if it is given as a number, check if it is valid
   if (is.character(dep_ind)) {
     if (is.null(col_names)) {
       stop("dep_ind was given as a name, but the selected input (data or mat) has no column names.")
@@ -100,17 +134,21 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
     stop("dep_ind must be either a numeric index or a character string.")
   }
 
+  # Calculate correlation matrix and sample size if data is provided
   if (!is.null(data)) {
 
     cor_out <- cor_calc(data = data, ordered = ordered,
-                        missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
+                        missing_handling = missing_handling, nimp = nimp, imp_method = imp_method, ...)
     list2env(cor_out, envir = environment())
 
     if (is.null(n)){
-      ns <- calculate_sample_size(data = data, n_calc = n_calc)
-      n <- ns[dep_ind]  # use the sample size for the dependent variable
+      # Calculate sample sizes
+      ns <- reg_calculate_sample_size(data = data, n_calc = n_calc)
+      # use the sample size in the dep_ind place
+      n <- ns[dep_ind]
     } else {checker(n)}
 
+  # if mat is provided, transform to correlation matrix and check for n
   } else if (!is.null(mat)) {
     if (is.null(n)) {
       stop("If 'mat' is provided, 'n' must also be specified.")
@@ -119,17 +157,19 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
       stop("Length of 'n' must be 1.")
     }
     mat <- stats::cov2cor(mat)
-    nimp <- missing_handling <- cor_method <- NULL
+    nimp <- missing_handling <- cor_method <- imp_method <- NULL
   }
 
-
+  # Search for the optimal regression model
   mod <- pred_search(mat = mat, dep_ind = dep_ind,
                          possible_pred_ind = setdiff(1:ncol(mat), dep_ind),
                      n = n, k = k)
 
+  # Retrive the estimated beta weights and assign names
   regression <- mod$actual_betas
   names(regression) <- colnames(mat)[mod$actual_preds]
 
+  # Prepare output
   result <- list(
     regression = regression,
     R2 = 1 - mod$actual_resid_var,
@@ -138,22 +178,50 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
                 nimp = nimp, imp_method = imp_method)
   )
 
+  # Assign class and return
   class(result) <- c("mantar_regression")
   return(result)
 }
 
 
 
+#' @title Helper for stepwise predictor search based on information criteria
+#'
+#' @description Internal helper that performs a greedy stepwise search for
+#' predictors of a given dependent variable, using an information criterion
+#' (e.g., AIC or BIC) as selection rule. Predictors are added or removed one
+#' at a time based on whether they improve the information criterion.
+#'
+#' @param mat Correlation matrix
+#' @param dep_ind Index of the dependent variable in of `mat`
+#' @param possible_pred_ind Vector of indices for the possible predictor variables in `mat`
+#' @param n Sample size for information criteria calculation
+#' @param k Penalty term used in the information criteria. Defaults to `log(n)` (BIC).
+#' Set to `2` for AIC.
+#'
+#' @returns
+#' A list with the following elements:
+#' \describe{
+#'   \item{actual_preds}{Integer vector with the indices of the selected predictors.}
+#'   \item{actual_betas}{Numeric vector with the corresponding regression coefficients.}
+#'   \item{actual_resid_var}{Residual variance of the final model.}
+#'   \item{best_IC}{Information criterion value of the final model.}
+#' }
+#' @noRd
 pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
 
+  # Compute Null Model and the corresponding Information Criterion
   null_mod <- matrix_regression(mat = mat, dep_ind = dep_ind, pred_ind = NULL)
   null_IC <- reg_ic_calc(resid_var = null_mod$resid_var, n = n, n_preds = 0, k = k)
 
-  actual_preds <- c()     # initialize vector for actual predictors
-  actual_betas <- c()     # initialize vector for actual betas
-  actual_resid_var <- null_mod$resid_var # initialize object for actual residual variance
-
-  best_IC <- null_IC  # initialize best IC with null model
+  # initialize vector for actual predictors
+  actual_preds <- c()
+  # initialize vector for actual betas
+  actual_betas <- c()
+  # initialize object for actual residual variance using null model
+  actual_resid_var <- null_mod$resid_var
+  # initialize best IC with null model
+  best_IC <- null_IC
 
   while(TRUE){
     mods <- lapply(possible_pred_ind, function(pred){
@@ -195,7 +263,8 @@ pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
       return(list(IC = IC, mod_preds = mod_preds, mod_betas = mod_betas, mod_resid_var = mod_resid_var))
     })
 
-    ICs <-  lapply(mods, "[[", "IC") |> unlist()  # extract information criteria from models
+    # extract information criteria from models
+    ICs <-  lapply(mods, "[[", "IC") |> unlist()
 
     # if there is a model with a lower information criteria than the best model so far
     if (any(ICs< best_IC)){
@@ -218,7 +287,11 @@ pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
     }
   }
 
-  return(list(actual_preds = actual_preds, actual_betas = actual_betas, actual_resid_var = actual_resid_var, best_IC = best_IC))
+  # return model information for the best model
+  return(list(actual_preds = actual_preds,
+              actual_betas = actual_betas,
+              actual_resid_var = actual_resid_var,
+              best_IC = best_IC))
 
 }
 

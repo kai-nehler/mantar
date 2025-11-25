@@ -1,183 +1,213 @@
-#' Calculate correlation matrix with different methods and missing data handling
+#' @title
+#' Correlation Matrix Estimation with Support for Multiple Correlation Types
 #'
-#' @param data A data frame or matrix containing the variables for which the correlation matrix is to be calculated.
-#' @param ordered Specifies whether variables should be treated as ordered categorical when determining correlations.
-#' Options are `TRUE`, `FALSE`, or `"adapted"`. The argument can be provided as a single value
-#' (applied to all variables) or as a vector of length equal to the number of variables (using only `TRUE` and `FALSE`),
-#' allowing mixed specifications. With the default `"adapted"`, the treatment of each variable is determined according to
-#' guidelines from preliminary simulations (considering the number of cases, number of variables,
-#' and number of categories).
-#' @param missing_handling Method for estimating the correlation matrix in the presence of missing data.
-#' `"tow-step-em"` uses a classic EM algorithm to estimate the correlation matrix from the data.
-#' `"stacked-mi"` uses multiple imputation to estimate the correlation matrix from the data.
-#' `"pairwise"` uses pairwise deletion to estimate the correlation matrix from the data.
-#' `"listwise"` uses listwise deletion to estimate the correlation matrix from the data.
-#' @param nimp Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).
-#' @param imp_method Method for multiple imputation when using `"stacked-mi"` for missing data handling. Default is `"pmm"` (predictive mean matching).
-#' @param max_categories Maximum number of categories for a variable to be considered ordered if `cor_method = "adapted"` (default: 7).
+#' @description
+#' Computes a correlation matrix from raw data while accounting for missing
+#' values through several missing-data handling strategies. Supports different
+#' correlation types based on whether variables are treated as ordered.
+#'
+#' @param data Data frame or matrix containing the variables for which the
+#' correlation matrix is to be computed. May include missing values.
+#' @param ordered Logical vector indicating whether each variable in `data`
+#' should be treated as ordered categorical when computing the correlation
+#' matrix. If a single logical value is supplied, it is recycled to all
+#' variables.
+#' @param missing_handling Character string specifying how the correlation
+#' matrix is estimated from `data` in the presence of missing values. Possible
+#' values are:
+#' \describe{
+#'   \item{`"two-step-em"`}{Uses a classical EM algorithm to estimate the
+#'   correlation matrix from `data`.}
+#'   \item{`"stacked-mi"`}{Uses stacked multiple imputation to estimate the
+#'   correlation matrix from `data`.}
+#'   \item{`"pairwise"`}{Uses pairwise deletion to compute correlations from
+#'   `data`.}
+#'   \item{`"listwise"`}{Uses listwise deletion to compute correlations from
+#'   `data`.}
+#' }
+#' @param nimp Number of imputations (default: 20) to be used when
+#' `missing_handling = "stacked-mi"`.
+#' @param imp_method Character string specifying the imputation method to be
+#' used when `missing_handling = "stacked-mi"` (default: `"pmm"` - predictive
+#' mean matching).
+#' @param maxit Maximum number of iterations for the imputation algorithm when
+#' `missing_handling = "stacked-mi"` (default: 10).
+#' @param ... Further arguments passed to internal functions.
 #'
 #' @details
-#' While polychoric correlations are generally more appropriate for ordered categorical data, they rely on the assumption of multivariate normality
-#' and may encounter estimation problems if the number of available observations is small relative to the number of estimated parameters. Preliminary
-#' simulations suggest that in such cases Pearson correlations may introduce less bias, an effect that becomes even more pronounced when data are missing.
+#' Correlations are computed pairwise:
+#' * Polychoric correlations for two ordered variables,
+#' * Polyserial correlations for one ordered and one continuous variable,
+#' * Pearson correlations for two continuous variables.
 #'
-#' We therefore allow users either to specify the correlation type directly or to use an adaptive option that selects the method based on the simulation
-#' results. In general, variables with more than seven categories can be treated as continuous, whereas for variables with fewer categories the procedure
-#' evaluates whether the amount of available information is too limited to justify polychoric estimation, in which
-#' case Pearson correlations are used instead. The method is applied pairwise: polychoric correlations are computed if both variables are treated as
-#' ordinal, polyserial correlations if one variable is ordinal and the other continuous, and Pearson correlations if both are continuous. The adaptive
-#' procedure is still under development and may be refined in future versions.
+#' Treating variables as ordered requires the missing handling method to be either
+#' `"stacked-mi"` or `"listwise"`
 #'
-#' @returns A list with the following elements:
+#' Means are computed whenever Pearson correlations are used. If any variable
+#' is treated as ordered, `means` is returned as NULL.
+#'
+#' @returns A list containing:
 #' \describe{
-#' \item{mat}{Estimated correlation matrix.}
-#' \item{missing_handling}{Method used for handling missing data (if applicable).}
-#' \item{nimp}{Number of imputations used (if applicable).}
-#' \item{cor_method}{Matrix indicating the correlation method used for each pair of variables.}
+#'   \item{mat}{Estimated correlation matrix.}
+#'   \item{means}{Vector of estimated means. If any variable is treated as ordered,
+#'                means is returned as NULL.}
+#'   \item{cor_method}{A matrix indicating the correlation method used for each
+#'                     variable pair.}
+#'   \item{args}{List of settings used in the correlation estimation.}
 #' }
 #' @export
 #'
 #' @examples
 #' # Estimate correlation matrix from full data set
-#' result <- cor_calc(data = mantar_dummy_full, ordered = FALSE)
+#' result <- cor_calc(data = mantar_dummy_full_cont,
+#'                    ordered = FALSE)
 #'
 #' # View estimated correlation matrix and methods used
 #' result$mat
 #' result$cor_method
 #'
 #' # Estimate correlation matrix for data set with missings
-#' result_mis <- cor_calc(data = mantar_dummy_mis,
-#'                       ordered = "adapted",
+#' result_mis <- cor_calc(data = mantar_dummy_mis_cont,
+#'                       ordered = FALSE,
 #'                       missing_handling = "two-step-em")
 #'
 #' # View estimated correlation matrix and methods used
 #' result_mis$mat
 #' result_mis$cor_method
-cor_calc <- function(data, ordered = "adapted",
+cor_calc <- function(data, ordered = FALSE,
                      missing_handling = "two-step-em",
-                     nimp = 20, imp_method = "pmm", max_categories = 7) {
+                     nimp = 20, imp_method = "pmm",
+                     maxit = 10, ...) {
 
-  missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
+  # Capture additional arguments
+  dots <- list(...)
 
+  # Match and validate missing handling method
+  missing_handling <- match.arg(tolower(missing_handling),
+                                choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
+  # Check data input - setting mat = NULL important to perform the correct check
   checker(data = data, mat = NULL)
 
+  # Check ordered input to be logical, without NAs and have correct length
+  if (any(is.na(ordered))) {
+    stop("`ordered` must not contain NA.")
+  }
+  if (any(!is.logical(ordered))){
+    stop("All entries of `ordered` must be logical (TRUE/FALSE).")
+  }
   if (length(ordered) == 1L) {
-    if (is.logical(ordered)) {
-      if (is.na(ordered)) {
-        stop("`ordered` must not contain NA.")
-      }
+      # Recycle to all variables
       ordered <- rep(ordered, ncol(data))
-    } else if (is.character(ordered)) {
-      ordered <- tolower(ordered)
-      if (!identical(ordered, "adapted")) {
-        stop('If `ordered` is a single character, it must be "adapted".')
-      }
     } else {
-      stop('If `ordered` has length 1, it must be logical (TRUE/FALSE) or "adapted".')
-    }
-  } else { # length > 1
-    if (!is.logical(ordered)) {
-      stop("If `ordered` has length > 1, it must be a logical vector (TRUE/FALSE).")
-    }
-    if (length(ordered) != ncol(data)) {
-      stop("If `ordered` has length > 1, its length must equal the number of variables (p = ", ncol(data), ").")
-    }
-    if (any(is.na(ordered))) {
-      stop("`ordered` must not contain NA.")
-    }
-  }
-
-  if ("adapted" %in% ordered) {
-    if ((sum(!is.na(data))/80) < (ncol(data) * (ncol(data) - 1) / 2)) {
-      ordered <- rep(FALSE, ncol(data))
-      text <- "Using 'pearson' correlation method due to small ratio of available information to estimated correlations."
-    } else {
-      ordered <- vapply(data, function(x) {
-        length(unique(x[!is.na(x)])) <= max_categories
-      }, logical(1))
-      if(any(ordered)) {
-        if (sum(ordered) == ncol(data)) {
-          text <- "Using only 'polychoric' correlations because all variables are ordered."
-        } else {
-          text <- paste(
-            "Using mix of 'pearson', 'polychoric' and 'polyserial' correlations because some variables are ordered, but not all. Ordered variables are",
-            paste(names(data)[ordered], collapse = ", "))
-        }
-      } else {
-        text <- "Using the 'pearson' correlation method because the number of distinct values suggests continuous variables."
+      if (length(ordered) != ncol(data)) {
+        # Incorrect length - abort the estimation
+        stop("If `ordered` has length > 1, its length must equal the number of variables (p = ", ncol(data), ").")
       }
     }
-    message(text)
-  }
 
   # Check if package is installed if polychoric method is selected
-  if (any(ordered) && !requireNamespace("lavaan", quietly = TRUE)) {
+  any_ord <- any(ordered)
+  if (any_ord && !requireNamespace("lavaan", quietly = TRUE)) {
     stop(
       "Package \"lavaan\" must be installed to compute polychoric or polyserial correlations.",
       call. = FALSE
     )
   }
 
+  # Prepare means vector
+  means <- NULL
+
+  # Handle missing data
   if (anyNA(data)){
     if (missing_handling == "two-step-em"){
 
+      # EM algorithm cannot treat variables as ordered
+      if (any_ord) {
+        stop(
+          "Cannot use 'two-step-em' when any variables are ordered Either set ordered = FALSE or choose a
+           different missing data method."
+        )
+      }
+
+      # Check if lavaan is installed for the EM algorithm
       if (!requireNamespace("lavaan", quietly = TRUE)) {
         stop(
-          "Package \"lavaan\" must be installed to use this function.",
+          "Package \"lavaan\" must be installed to use the EM algorithm to handle missingness.",
           call. = FALSE
         )
       }
 
+      # Estimate correlation matrix with EM algorithm
       lavobject <- suppressWarnings(try(lavaan::lavCor(data,
                                                        missing = "ml", se = "none", meanstructure = TRUE,
                                                        estimator = "ML", output = "fit")))
+      # If lavcor fails - stop the estimation
       if (inherits(lavobject, "try-error")) stop("lavaan::lavCor failed. Check your data.")
+      # Extract estimated correlation matrix and means
       mat <- stats::cov2cor(lavaan::inspect(lavobject, "cov.ov"))
-      if (any(ordered)){
-        warning("Using a specific two-step EM algorithm based on polychoric or polyserial correlations is not implemented at the moment.
-                  Will proceed with the two-step EM approach based on pearson correlations.")
-      }
+      means <- lavaan::inspect(lavobject, "mean.ov")
+
+      # Set nimp to NULL as no multiple imputation was used
       nimp <- NULL
 
     } else if (missing_handling == "stacked-mi"){
 
+      # Check if mice is installed for multiple imputation
       if (!requireNamespace("mice", quietly = TRUE)) {
         stop(
           "Package \"mice\" must be installed to use this function.",
           call. = FALSE
         )
       }
+
+      # Keep column names safe during imputation
       original_names <- colnames(data)
       colnames(data) <- make.names(original_names)
 
-      imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10, method = imp_method,
-                                                  ridge = 0, donors = 5, ls.method = "qr"))
+      # Perform multiple imputation and stack the data
+      imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10,
+                                                  method = imp_method, ...))
       stacked_data <- mice::complete(imputed_data, c(1:nimp))
       colnames(stacked_data) <- original_names  # restore original column names
-      if (any(ordered)){
-        mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = names(data)[ordered],
-                                                   se = "none", output = "cor")))
-        if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
-      }else {
+      if (any_ord) {
+        mat <- suppressWarnings(
+          try(lavaan::lavCor(stacked_data, ordered = names(data)[ordered],
+                             se = "none", output = "cor"))
+        )
+        if (inherits(mat, "try-error"))
+          stop("lavaan::lavCor failed. Check your data.")
+      } else {
         mat <- stats::cor(stacked_data)
+        means <- colMeans(stacked_data)
       }
 
     } else if (missing_handling == "pairwise"){
-      if (any(ordered)){
-        warning("Using pairwise deletion based on polychoric or polyserial correlations is not implemented at the moment.
-                Will proceed with pairwise deletion based on pearson correlations.")
+      if (any_ord) {
+        stop(
+          "Cannot use 'pairwise' when any variables are treated as ordered. Either set ordered = FALSE or choose a
+           different missing data method."
+        )
       }
       mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
-      nimp <- NULL
-    } else if (missing_handling == "listwise"){
-      if (any(ordered)){
-        mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = names(data)[ordered],
-          missing = "listwise", se = "none", output = "cor")))
-        if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
+      means <- colMeans(data, na.rm = TRUE)
+      nimp <- imp_method <- maxit <- NULL
+
+    } else if (missing_handling == "listwise") {
+
+      data_complete <- stats::na.omit(data)
+
+      if (any_ord) {
+        mat <- suppressWarnings(
+          try(lavaan::lavCor(data_complete, ordered = names(data)[ordered],
+                             missing = "listwise", se = "none", output = "cor"))
+        )
+        if (inherits(mat, "try-error"))
+          stop("lavaan::lavCor failed. Check your data.")
       } else {
-        mat <- stats::cov2cor(stats::cov(data, use = "complete.obs"))
+        mat <- stats::cov2cor(stats::cov(data_complete, use = "complete.obs"))
+        means <- colMeans(data_complete)
       }
-      nimp <- NULL
+      nimp <- imp_method <- maxit <- NULL
     }
   } else {
     if (any(ordered)){
@@ -186,9 +216,10 @@ cor_calc <- function(data, ordered = "adapted",
       if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
     } else {
       mat <- stats::cov2cor(stats::cov(data))
+      means <- colMeans(data)
     }
     missing_handling <- NULL
-    nimp <- NULL
+    nimp <- imp_method <- maxit <- NULL
   }
 
   cor_method <- matrix("", ncol(data), ncol(data), dimnames = list(names(data), names(data)))
@@ -203,5 +234,43 @@ cor_calc <- function(data, ordered = "adapted",
   )
 
 
-  return(list(mat = mat, missing_handling = missing_handling, nimp = nimp, cor_method = cor_method))
+  return(list(
+    mat = mat,
+    means = means,
+    cor_method = cor_method,
+    args = list(
+      missing_handling = missing_handling,
+      nimp = nimp)
+  ))
 }
+
+
+transform_inverse <- function(inverse_cov){
+  rows <- nrow(inverse_cov)
+  cols <- ncol(inverse_cov)
+  cov <- solve(inverse_cov)
+  inverse_cor <- matrix(NA, rows, cols)
+
+  # it is important to do it this way, cause using solve, cov2cor and solve again introduces small errors
+  for (i in 1:rows){
+    for (j in 1:cols){
+      inverse_cor[i,j] <- inverse_cov[i,j] * sqrt(diag(cov)[i]) * sqrt(diag(cov)[j])
+    }
+  }
+  return(inverse_cor)
+}
+
+#' @title Convert Inverse Covariance Matrix to Network Matrix
+#'
+#' @param theta Inverse covariance matrix.
+#'
+#' @returns Network matrix with partial correlations.
+#' @noRd
+inv_to_net <- function(theta){
+  net <- -stats::cov2cor(theta)
+  diag(net) <- 0
+  net <- Matrix::forceSymmetric(net) |> as.matrix()
+  return(net)
+}
+
+

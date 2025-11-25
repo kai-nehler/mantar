@@ -2,74 +2,95 @@
 % Please edit documentation in R/cor_calc.R
 \name{cor_calc}
 \alias{cor_calc}
-\title{Calculate correlation matrix with different methods and missing data handling}
+\title{Correlation Matrix Estimation with Support for Multiple Correlation Types}
 \usage{
 cor_calc(
   data,
-  ordered = "adapted",
+  ordered = FALSE,
   missing_handling = "two-step-em",
   nimp = 20,
   imp_method = "pmm",
-  max_categories = 7
+  maxit = 10,
+  ...
 )
 }
 \arguments{
-\item{data}{A data frame or matrix containing the variables for which the correlation matrix is to be calculated.}
+\item{data}{Data frame or matrix containing the variables for which the
+correlation matrix is to be computed. May include missing values.}
 
-\item{ordered}{Specifies whether variables should be treated as ordered categorical when determining correlations.
-Options are \code{TRUE}, \code{FALSE}, or \code{"adapted"}. The argument can be provided as a single value
-(applied to all variables) or as a vector of length equal to the number of variables (using only \code{TRUE} and \code{FALSE}),
-allowing mixed specifications. With the default \code{"adapted"}, the treatment of each variable is determined according to
-guidelines from preliminary simulations (considering the number of cases, number of variables,
-and number of categories).}
+\item{ordered}{Logical vector indicating whether each variable in \code{data}
+should be treated as ordered categorical when computing the correlation
+matrix. If a single logical value is supplied, it is recycled to all
+variables.}
 
-\item{missing_handling}{Method for estimating the correlation matrix in the presence of missing data.
-\code{"tow-step-em"} uses a classic EM algorithm to estimate the correlation matrix from the data.
-\code{"stacked-mi"} uses multiple imputation to estimate the correlation matrix from the data.
-\code{"pairwise"} uses pairwise deletion to estimate the correlation matrix from the data.
-\code{"listwise"} uses listwise deletion to estimate the correlation matrix from the data.}
+\item{missing_handling}{Character string specifying how the correlation
+matrix is estimated from \code{data} in the presence of missing values. Possible
+values are:
+\describe{
+\item{\code{"two-step-em"}}{Uses a classical EM algorithm to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"stacked-mi"}}{Uses stacked multiple imputation to estimate the
+correlation matrix from \code{data}.}
+\item{\code{"pairwise"}}{Uses pairwise deletion to compute correlations from
+\code{data}.}
+\item{\code{"listwise"}}{Uses listwise deletion to compute correlations from
+\code{data}.}
+}}
 
-\item{nimp}{Number of multiple imputations to perform when using multiple imputation for missing data (default: 20).}
+\item{nimp}{Number of imputations (default: 20) to be used when
+\code{missing_handling = "stacked-mi"}.}
 
-\item{imp_method}{Method for multiple imputation when using \code{"stacked-mi"} for missing data handling. Default is \code{"pmm"} (predictive mean matching).}
+\item{imp_method}{Character string specifying the imputation method to be
+used when \code{missing_handling = "stacked-mi"} (default: \code{"pmm"} - predictive
+mean matching).}
 
-\item{max_categories}{Maximum number of categories for a variable to be considered ordered if \code{cor_method = "adapted"} (default: 7).}
+\item{maxit}{Maximum number of iterations for the imputation algorithm when
+\code{missing_handling = "stacked-mi"} (default: 10).}
+
+\item{...}{Further arguments passed to internal functions.}
 }
 \value{
-A list with the following elements:
+A list containing:
 \describe{
 \item{mat}{Estimated correlation matrix.}
-\item{missing_handling}{Method used for handling missing data (if applicable).}
-\item{nimp}{Number of imputations used (if applicable).}
-\item{cor_method}{Matrix indicating the correlation method used for each pair of variables.}
+\item{means}{Vector of estimated means. If any variable is treated as ordered,
+means is returned as NULL.}
+\item{cor_method}{A matrix indicating the correlation method used for each
+variable pair.}
+\item{args}{List of settings used in the correlation estimation.}
 }
 }
 \description{
-Calculate correlation matrix with different methods and missing data handling
+Computes a correlation matrix from raw data while accounting for missing
+values through several missing-data handling strategies. Supports different
+correlation types based on whether variables are treated as ordered.
 }
 \details{
-While polychoric correlations are generally more appropriate for ordered categorical data, they rely on the assumption of multivariate normality
-and may encounter estimation problems if the number of available observations is small relative to the number of estimated parameters. Preliminary
-simulations suggest that in such cases Pearson correlations may introduce less bias, an effect that becomes even more pronounced when data are missing.
+Correlations are computed pairwise:
+\itemize{
+\item Polychoric correlations for two ordered variables,
+\item Polyserial correlations for one ordered and one continuous variable,
+\item Pearson correlations for two continuous variables.
+}
 
-We therefore allow users either to specify the correlation type directly or to use an adaptive option that selects the method based on the simulation
-results. In general, variables with more than seven categories can be treated as continuous, whereas for variables with fewer categories the procedure
-evaluates whether the amount of available information is too limited to justify polychoric estimation, in which
-case Pearson correlations are used instead. The method is applied pairwise: polychoric correlations are computed if both variables are treated as
-ordinal, polyserial correlations if one variable is ordinal and the other continuous, and Pearson correlations if both are continuous. The adaptive
-procedure is still under development and may be refined in future versions.
+Treating variables as ordered requires the missing handling method to be either
+\code{"stacked-mi"} or \code{"listwise"}
+
+Means are computed whenever Pearson correlations are used. If any variable
+is treated as ordered, \code{means} is returned as NULL.
 }
 \examples{
 # Estimate correlation matrix from full data set
-result <- cor_calc(data = mantar_dummy_full, ordered = FALSE)
+result <- cor_calc(data = mantar_dummy_full_cont,
+                   ordered = FALSE)
 
 # View estimated correlation matrix and methods used
 result$mat
 result$cor_method
 
 # Estimate correlation matrix for data set with missings
-result_mis <- cor_calc(data = mantar_dummy_mis,
-                      ordered = "adapted",
+result_mis <- cor_calc(data = mantar_dummy_mis_cont,
+                      ordered = FALSE,
                       missing_handling = "two-step-em")
 
 # View estimated correlation matrix and methods used

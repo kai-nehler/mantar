@@ -1,11 +1,20 @@
+#' @title Checker function to validate inputs
+#'
+#' @param ... Any arguments to be checked.
+#'
+#' @returns Either stops execution with an error message if checks fail, or
+#'          returns NULL invisibly if all checks pass.
+#' @noRd
 checker <- function(...) {
+  # Capture arguments
   args <- list(...)
+  # Extract specific arguments (with default NULL if not provided)
   data <- args$data
   mat <- args$mat
   ns <- args$ns
   n <- args$n
 
-  # Check: Which input is provided?
+  # This section deals with checking data and mat inputs
   if (all(c("data", "mat") %in% names(args))) {
     if (is.null(data) && is.null(mat)) {
       stop("Either 'data' or 'mat' must be provided.")
@@ -38,20 +47,21 @@ checker <- function(...) {
       }
   }
 
-  # Check length of ns
+  # This section deals with checking ns for multiple regression model
   if ("ns" %in% names(args)) {
     if ("mat" %in% names(args)){
-      if (length(ns) != ncol(mat)) {
-        stop("Length of 'ns' must match the number of columns in 'mat'.")
+      if (length(ns) != ncol(mat) & length(ns) != 1) {
+        stop("'ns' must be either a single value or a vector with one entry per column in 'mat'.")
       }
     }
     if ("data" %in% names(args)){
-      if (length(ns) != ncol(data)) {
-        stop("Length of 'ns' must match the number of columns in 'data'.")
+      if (length(ns) != ncol(data) & length(ns) != 1) {
+        stop("'ns' must be either a single value or a vector with one entry per column in 'data'.")
       }
     }
   }
 
+  # This section deals with checking n for a single regression model
   if ("n" %in% names(args)) {
     if (length(n) != 1){
       stop("Length of 'n' must be 1.")
