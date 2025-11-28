@@ -14,11 +14,11 @@ regularization_net(
   k = "log(n)",
   extended = NULL,
   extended_gamma = 0.5,
-  penalty = "glasso",
+  penalty = "atan",
   vary = "lambda",
   n_lambda = NULL,
   lambda_min_ratio = 0.01,
-  n_gamma = 1,
+  n_gamma = 50,
   pen_diag = FALSE,
   lambda = NULL,
   gamma = NULL,
@@ -91,11 +91,13 @@ during regularization to determine the optimal network. Possible values are
 \code{"lambda"}, \code{"gamma"}, or \code{"both"}.}
 
 \item{n_lambda}{Number of lambda values to be evaluated. If not specified,
-the default is 100 when \code{penalty = "glasso"} and 50 otherwise.}
+the default is 100 when \code{penalty = "glasso"} and 50 if \code{lambda} is varied for.
+If \code{vary == "gamma"}, \code{n_lambda} is set to 1.}
 
 \item{lambda_min_ratio}{Ratio of the smallest to the largest lambda value.}
 
-\item{n_gamma}{Number of gamma values to be evaluated.}
+\item{n_gamma}{Number of gamma values to be evaluated. Is set to 1
+if \code{vary == "lambda"}.}
 
 \item{pen_diag}{Logical; should the diagonal elements be penalized in the
 regularization process?}

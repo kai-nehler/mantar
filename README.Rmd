@@ -28,20 +28,28 @@ knitr::opts_chunk$set(
 
 The current stable version (0.2.0) is [available on CRAN](https://cran.r-project.org/package=stuart) and can be installed using the usual approach:
 
-``` r
+```{r, craninstall, eval = FALSE}
 install.packages("mantar")
 ```
 
-You can install the development version of mantar from [GitHub](https://github.com/kai-nehler/mantar) with:
+You can install the development version of `mantar` from [GitHub](https://github.com/kai-nehler/mantar). Before installing, make sure your system is able to compile packages from source. You can verify this using:
 
-``` r
+```{r, systemcheck}
+pkgbuild::check_build_tools()
+```
+
+If build tools are missing or outdated, you may need to install/update appropriate development tools (e.g. Rtools for Windows) for your operating system.
+
+Once your system is ready, install the development branch via:
+
+```{r, pakinstall}
 # install.packages("pak")
 pak::pak("kai-nehler/mantar@develop")
 ```
 
 The extension `@develop` ensures that you get the latest development version of the package, which may include new features and bug fixes not yet available in the stable release on CRAN. Exluding this extension will install the same version as the one on CRAN.
 
-After installation the easiest way to get an overview of functions and capabilities is to use `?mantar` to open the package help-file. You could also read the rest of this README for an introduction and some examples.
+After installation the easiest way to get an overview of functions and capabilities is to use `help(package = "mantar")` to open the package help-file. You could also read the rest of this README for an introduction and some examples.
 
 ## Features
 

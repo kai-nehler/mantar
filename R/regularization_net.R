@@ -58,9 +58,11 @@
 #' during regularization to determine the optimal network. Possible values are
 #' `"lambda"`, `"gamma"`, or `"both"`.
 #' @param n_lambda Number of lambda values to be evaluated. If not specified,
-#' the default is 100 when `penalty = "glasso"` and 50 otherwise.
+#' the default is 100 when `penalty = "glasso"` and 50 if `lambda` is varied for.
+#' If `vary == "gamma"`, `n_lambda` is set to 1.
 #' @param lambda_min_ratio Ratio of the smallest to the largest lambda value.
-#' @param n_gamma Number of gamma values to be evaluated.
+#' @param n_gamma Number of gamma values to be evaluated. Is set to 1
+#' if `vary == "lambda"`.
 #' @param pen_diag Logical; should the diagonal elements be penalized in the
 #' regularization process?
 #' @param lambda Optional user-specified vector of lambda values.
@@ -222,10 +224,10 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
                                likelihood = "obs_based", n_calc = "average", count_diagonal = TRUE,
                                k = "log(n)", extended = NULL,
                                extended_gamma = 0.5,
-                               penalty = "glasso",
+                               penalty = "atan",
                                vary = "lambda", n_lambda = NULL,
                                lambda_min_ratio = 0.01,
-                               n_gamma = 1, pen_diag = FALSE,
+                               n_gamma = 50, pen_diag = FALSE,
                                lambda = NULL, gamma = NULL,
                                ordered = FALSE,
                                missing_handling = "two-step-em",
@@ -376,7 +378,7 @@ regularization_sel <- function(mat, data = NULL, means = NULL, n, k,
                                penalty = "glasso", vary = "lambda",
                                n_lambda = 50,
                                lambda_min_ratio = 0.01,
-                               n_gamma = 1, pen_diag = FALSE,
+                               n_gamma = 50, pen_diag = FALSE,
                                lambda = NULL, gamma = NULL) {
 
 
@@ -479,7 +481,7 @@ def_pen_mats <- function(mat,
                          vary =  "lambda",
                          n_lambda = 50,
                          lambda_min_ratio = 0.01,
-                         n_gamma = 1,
+                         n_gamma = 50,
                          n = NULL,
                          pen_diag = FALSE,
                          lambda = NULL,
@@ -500,7 +502,8 @@ def_pen_mats <- function(mat,
   } else if (vary %in% c("lambda", "both")) {
 
     if (vary == "lambda" & n_gamma > 1) {
-      warning("Varying 'lambda' only, but n_gamma > 1. Using only 1 gamma value.")
+      n_gamma <- 1
+      warning("Varying 'lambda' only, n_gamma is set to 1.")
     }
 
     # largest lambda value is the largest off-diagonal absolute value in the correlation matrix
@@ -517,12 +520,17 @@ def_pen_mats <- function(mat,
 
   # create values for gamma when varying gamma and it is not user-specified
   if (!is.null(gamma)) {
+
+    if (any(gamma <0)){
+      stop("Gamma values must be positive.")
+    }
+
     gamma_vec <- gamma
     message("Using user-specified gamma values.")
   } else if (vary %in% c("gamma", "both")) {
 
     if (vary == "gamma" & n_lambda > 1) {
-      warning("Varying 'gamma' only, but n_lambda > 1. Using only 1 lambda value.")
+      warning("Varying 'gamma' only, n_gamma is set to 1.")
     }
     # Defaults for multiple gamma values based on penalty type
     if (penalty == "scad") {
@@ -567,6 +575,10 @@ def_pen_mats <- function(mat,
       gam <- grid$gamma[i]
       p   <- ncol(theta)
 
+      # Penalty functions and corresponding derivatives were adapted from the
+      # original implementation in the now-deprecated GGMncv package
+      # (authored by Donald R. Williams).
+
       if (penalty == "glasso") {
 
         # for glasso, penalty matrix is simply lambda times a matrix of ones
@@ -580,11 +592,19 @@ def_pen_mats <- function(mat,
 
       } else if (penalty == "scad") {
 
+        if (any(gamma <= 2)){
+          stop("Gamma must be greater than 2 for SCAD penalty.")
+        }
+
         theta_safe <- abs(theta)
         pen_mat <- lam * (theta_safe <= lam) +
           (pmax(gam * lam - theta_safe, 0) / (gam - 1)) * (theta_safe > lam)
 
       } else if (penalty == "mcp") {
+
+        if (any(gamma <= 1)){
+          stop("Gamma must be greater than 1 for MCP penalty.")
+        }
 
         theta_safe <- abs(theta)
         pen_mat <- (theta_safe <= gam * lam) * (lam - theta_safe / gam)
@@ -619,13 +639,12 @@ def_pen_mats <- function(mat,
           stop("Package 'numDeriv' must be installed to use sica penalty.", call. = FALSE)
         }
 
-        theta_safe <- abs(theta + 1e-4)
-
         sica_pen <- function(x, lam, gam){
-          x <- abs(x)
+          x <- abs(x + 1e-4)
           lam * (((gam + 1) * x) /(x + gam))
         }
 
+        theta_safe <- abs(theta)
         pen_mat <- matrix(
           numDeriv::grad(sica_pen, x = theta_safe, lam = lam, gam = gam),
           nrow = p, ncol = p
@@ -637,16 +656,15 @@ def_pen_mats <- function(mat,
           stop("Package 'numDeriv' must be installed to use log penalty.", call. = FALSE)
         }
 
-        theta_safe <- abs(theta + 1e-4)
-
         log_pen <- function(x, lam, gam = 0.01){
-          x <- abs(x)
+          x <- abs(x + 1e-4)
           gam_inv <- 1/gam
           (lam / log(gam_inv + 1)) * log(gam_inv * x + 1)
         }
 
+        theta_safe <- abs(theta)
         pen_mat <- matrix(
-          numDeriv::grad(log_pen, x = as.numeric(theta_safe), lam = lam, gam = gam),
+          numDeriv::grad(log_pen, x = theta_safe, lam = lam, gam = gam),
           nrow = p, ncol = p
         )
 
@@ -681,8 +699,3 @@ def_pen_mats <- function(mat,
     pen_mats = pen_mats
   )
 }
-
-
-
-
-
