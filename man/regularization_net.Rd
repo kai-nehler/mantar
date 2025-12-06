@@ -11,8 +11,7 @@ regularization_net(
   likelihood = "obs_based",
   n_calc = "average",
   count_diagonal = TRUE,
-  k = "log(n)",
-  extended = NULL,
+  ic_type = NULL,
   extended_gamma = 0.5,
   penalty = "atan",
   vary = "lambda",
@@ -71,17 +70,13 @@ the entries of \code{ns}.}
 diagonal elements be included when computing the sample size? Only relevant
 when \code{data} is provided and \code{n_calc = "average"}.}
 
-\item{k}{Penalty term per parameter (number of non-zero partial correlations)
-used in the network information criterion. The default \code{k = "log(n)"},
-where \code{n} is the sample size, corresponds to the classical BIC. Setting
-\code{k = "2"} yields the classical AIC.}
-
-\item{extended}{Logical; should the penalty in the information criterion be
-extended (e.g., using the EBIC instead of the BIC)? If \code{NULL}, the default is
-\code{TRUE} when \code{penalty = "glasso"} and \code{FALSE} otherwise.}
+\item{ic_type}{Character string specifying the type of information criterion
+used for model selection. Possible values are: \code{"aic"}, \code{"bic"}, and \code{"ebic"}.
+If no input is provided, defaults to \code{"ebic"} when \code{penalty = "glasso"} and
+\code{"bic"} otherwise.}
 
 \item{extended_gamma}{Numeric gamma parameter used in the extended information
-criterion calculation. Only relevant when \code{extended = TRUE}}
+criterion calculation. Only relevant when \code{ic_type = "ebic"}.}
 
 \item{penalty}{Character string indicating the type of penalty used for
 regularization. Available options are described in the Details section.}
@@ -211,14 +206,48 @@ This is currently the default.
 
 }
 
+\strong{Information Criteria}
+
+The argument \code{ic_type} specifies which information criterion is computed.
+All criteria are computed based on the log-likelihood of the estimated model.
+
+\describe{
+
+\item{\code{"aic"}:}{
+Akaike Information Criterion \insertCite{akaike.1974}{mantar};
+defined as
+\mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+number of freely estimated edge parameters (non-zero edges).
+}
+
+\item{\code{"bic"}:}{
+Bayesian Information Criterion \insertCite{schwarz.1978}{mantar};
+defined as
+\mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)},
+where \eqn{\ell} is the log-likelihood of the model, \eqn{k} is the
+number of freely estimated edge parameters (non-zero edges), and \eqn{n} is the sample size.
+}
+
+\item{\code{"ebic"}:}{
+Extended Bayesian Information Criterion \insertCite{chen.2008}{mantar};
+particularly useful in high-dimensional settings. Defined as
+\mjseqn{\mathrm{EBIC} = -2 \ell + k \log(n) + 4 \gamma k \log(p)},
+where \eqn{\ell} is the log-likelihood, \eqn{k} is the number of freely
+estimated edges (non-zero edges), \eqn{n} is the sample size, \eqn{p} is the number of
+variables, and \eqn{\gamma} is the extended-penalty parameter.
+}
+
+}
+
 \strong{Conditional Defaults}
 
 By default, some tuning parameters depend on the chosen penalty.
 Specifically, when \code{penalty = "glasso"}, the number of lambda
-values \code{n_lambda} defaults to \code{100} and \code{extended}
-defaults to \code{TRUE}. For all other penalties, the defaults are
-\code{n_lambda = 50} and \code{extended = FALSE}. These defaults can
-be overridden by specifying \code{n_lambda} and/or \code{extended}
+values \code{n_lambda} defaults to \code{100} and \code{ic_type}
+defaults to \code{"ebic"}. For all other penalties, the defaults are
+\code{n_lambda = 50} and \code{ic_type = "bic"}. These defaults can
+be overridden by specifying \code{n_lambda} and/or \code{ic_type}
 explicitly.
 
 \strong{Missing Handling}

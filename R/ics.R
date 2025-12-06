@@ -47,14 +47,22 @@ reg_calculate_sample_size <- function(data, n_calc = c("individual", "average", 
 #' @param resid_var Residual variance of the regression model
 #' @param n Integer; number of observations used to fit the model
 #' @param n_preds Integer; number of predictors in the model
-#' @param k Character string; penalty term for the information criterion
+#' @param ic_type Character; type of information criterion to compute.
+#' Options: "AIC", "BIC", "AICc"
 #'
 #' @return A single numeric value with the information criterion
 #' @noRd
-reg_ic_calc <- function(resid_var, n, n_preds, k){
+reg_ic_calc <- function(resid_var, n, n_preds, ic_type = "bic"){
 
-  # Convert the penalty experssion into an evaluated numeric value
-  k <- parse(text = k) |> eval()
+  ic_type <- match.arg(tolower(ic_type), choices =c("aic", "bic", "aicc"))
+
+  # Determine penalty k based on the type
+  # add 1 to n_preds for the intercept in aicc calculation
+  k <- switch(ic_type,
+              aic  = 2,
+              bic  = log(n),
+              aicc = 2 + (2 * (n_preds + 1) * (n_preds + 2)) / (n - n_preds - 2)
+  )
 
   # calculate log-likelihood
   LL <- -(n/2) * (log(resid_var) + log(2*pi) + 1)
@@ -123,9 +131,8 @@ mat_calculate_sample_size <- function(data, n_calc = c("average", "max", "total"
 #' @param mu Optional vector of variable means. Required if
 #' `likelihood = "obs_based"`.
 #' @param n Integer; effective sample size for the model.
-#' @param k Character string; penalty term for the information criterion.
-#' @param extended Logical; whether to use the extended version of the
-#' information criterion
+#' @param ic_type Type of information criterion to compute. Options are: `"bic"`,
+#' `"ebic"` and `"aic"`.
 #' @param extended_gamma Numeric; tuning parameter for the extended information
 #' criterion
 #' @param likelihood Character string; which likelihood to use for the
@@ -140,7 +147,10 @@ mat_calculate_sample_size <- function(data, n_calc = c("average", "max", "total"
 #' @returns A single numeric value with the information criterion
 #' @noRd
 mat_ic_calc <- function(data = NULL, sample_cor = NULL, theta, mu = NULL, n,
-                        k, extended, extended_gamma = 0.5, likelihood = "obs_based", ...){
+                        ic_type = "ebic", extended_gamma = 0.5, likelihood = "obs_based", ...){
+
+  # ensure ic_type is consistent
+  ic_type <- match.arg(tolower(ic_type), choices = c("ebic", "bic", "aic"))
 
   # number of variables
   p <- ncol(theta)
@@ -195,17 +205,15 @@ mat_ic_calc <- function(data = NULL, sample_cor = NULL, theta, mu = NULL, n,
     loglikelihood <- const1 + n/2 * (log(det(theta)) - sum(diag(theta %*% sample_cor)))
   }
 
-  # Convert the penalty experssion into an evaluated numeric value
-  k <- parse(text = k) |> eval()
   # find number of non-zero edges
   edges <- sum(theta[lower.tri(theta, diag = FALSE)] != 0)
 
-  if (extended){
-    # calculate extended information criterion
-    IC <- -2 * loglikelihood + edges * k + 4 * edges * extended_gamma * log(p)
-  } else {
-    # calculate standard information criterion
-    IC <- -2 * loglikelihood + edges * k
+  if (ic_type == "ebic"){
+    IC <- -2 * loglikelihood + edges * log(n) + 4 * edges * extended_gamma * log(p)
+  } else if(ic_type == "bic") {
+    IC <- -2 * loglikelihood + edges * log(n)
+  } else if(ic_type == "aic") {
+    IC <- -2 * loglikelihood + edges * 2
   }
 
   return(IC)

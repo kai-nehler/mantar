@@ -10,7 +10,7 @@ regression_opt(
   mat = NULL,
   dep_ind,
   n_calc = "individual",
-  k = "log(n)",
+  ic_type = "bic",
   ordered = FALSE,
   missing_handling = "stacked-mi",
   nimp = 20,
@@ -45,9 +45,8 @@ all variables.}
 \item{\code{"total"}}{Uses the total number of rows in \code{data}.}
 }}
 
-\item{k}{Penalty per parameter (number of predictors + 1) used in the
-information criterion. The default \code{k = "log(n)"} corresponds to the
-classical BIC. Setting \code{k = 2} yields the classical AIC.}
+\item{ic_type}{Type of information criterion to compute for model selection.
+Options are \code{bic} (default), \code{aic}, \code{aicc}.}
 
 \item{ordered}{Logical vector indicating whether each variable in \code{data}
 should be treated as ordered categorical when computing the correlation
@@ -91,6 +90,8 @@ Performs stepwise model selection for multiple regression using information
 criteria to identify the optimal regression model.
 }
 \details{
+\loadmathjax
+
 This function performs stepwise model selection for multiple regression
 using information criteria. It was originally developed as a component of
 the neighborhood selection framework for network estimation
@@ -101,6 +102,39 @@ settings with missing data. Unlike standard stepwise regression functions,
 this implementation explicitly supports missing-data handling strategies,
 making it suitable for situations in which classical methods fail or produce
 biased results.
+
+The argument \code{ic_type} specifies which information criterion is computed.
+All criteria are computed based on the log-likelihood of the maximum
+likelihood estimated regression model, where the residual variance
+determines the likelihood. The following options are available:
+
+\describe{
+
+\item{\code{"aic"}:}{
+Akaike Information Criterion \insertCite{akaike.1974}{mantar}; defined as
+\mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+number of estimated parameters (including the intercept).
+}
+
+\item{\code{"bic"}:}{
+Bayesian Information Criterion \insertCite{schwarz.1978}{mantar}; defined as
+\mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)}, where \eqn{\ell} is
+the log-likelihood of the model, \eqn{k} is the
+number of estimated parameters (including the intercept)
+and \eqn{n} is the sample size.
+}
+
+\item{\code{"aicc"}:}{
+Corrected Akaike Information Criterion \insertCite{hurvich.1989}{mantar};
+particularly useful in small samples where AIC tends to be biased.
+Defined as
+\mjseqn{\mathrm{AIC_c} = \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}},
+where \eqn{k} is the number of estimated parameters (including
+the intercept) and \eqn{n} is the sample size.
+}
+
+}
 }
 \examples{
 # For full data using AIC
@@ -108,7 +142,7 @@ biased results.
 result <- regression_opt(
   data = mantar_dummy_full_cont,
   dep_ind = 1,
-  k = "2"
+  ic_type = "aic"
 )
 
 # View regression coefficients and R-squared
@@ -124,9 +158,13 @@ result_mis <- regression_opt(
  dep_ind = 2,
  n_calc = "individual",
  missing_handling = "two-step-em",
+ ic_type = "bic"
  )
 
  # View regression coefficients and R-squared
  result_mis$regression
  result_mis$R2
+}
+\references{
+\insertAllCited{}
 }

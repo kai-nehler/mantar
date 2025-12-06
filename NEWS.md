@@ -1,5 +1,8 @@
 # mantar 0.2.0
 
+## Change of argument names and input
+* The argument `k`, which controlled the penalty term in information-criterion calculations, has been removed for security reasons. Instead, the penalty type is now specified via the argument `ic_type` (see the corresponding help pages).
+
 ## New defaults 
 * Changed the default handling of the `ridge` penalty in the multiple-imputation `pmm` workflow when looking for donors through regressions (`mice`). Instead of forcing `ridge = 0`, the function now uses the default value defined by `mice`, ensuring consistent and method-appropriate regularization.
 

@@ -15,7 +15,7 @@ test_that("reg_error_for_different_ncalc", {
 
 test_that("ic_calculated as number",{
   expect_equal(
-    class(reg_ic_calc(resid_var = 1, n = 400, n_preds = 2, k = "log(n)")),
+    class(reg_ic_calc(resid_var = 1, n = 400, n_preds = 2, ic_type = "bic")),
     "numeric"
   )
 })
@@ -43,8 +43,7 @@ test_that("mat_ic_calc: obs_based and mat_based agree for complete data", {
     theta     = theta,
     mu        = mu,
     n         = n,
-    k         = "log(n)",
-    extended  = FALSE,
+    ic_type   = "bic",
     likelihood = "obs_based"
   )
 

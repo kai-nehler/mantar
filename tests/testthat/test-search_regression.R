@@ -4,7 +4,7 @@ test_that("regression_opt() works with full data and AIC", {
   result <- regression_opt(
     data = mantar_dummy_full_cont,
     dep_ind = 1,
-    k = "2"
+    ic_type = "aic"
   )
 
   expect_type(result, "list")
@@ -61,8 +61,8 @@ test_that("regression_opt() works when mat and n are supplied", {
   expect_type(res$regression, "double")
   expect_true(length(res$regression) >= 0)
 
-  # args sollten die richtigen/neutralisierten Werte enthalten
-  expect_equal(res$args$k, "log(n)")
+  # check args
+  expect_equal(res$args$ic_type, "bic")
   expect_null(res$args$cor_method)
   expect_null(res$args$missing_handling)
   expect_null(res$args$nimp)
@@ -78,13 +78,13 @@ test_that("regression_opt() accepts dep_ind as column name", {
   res_index <- regression_opt(
     data   = mantar_dummy_full_cont,
     dep_ind = 1,
-    k = "2"
+    ic_type = "aic"
   )
 
   res_name <- regression_opt(
     data   = mantar_dummy_full_cont,
     dep_ind = dep_name,
-    k = "2"
+    ic_type = "aic"
   )
 
   # gleiche Regressionsergebnisse erwartet
@@ -123,21 +123,21 @@ test_that("errors in regression optimization work for mat input", {
     mat =  matrix(c("a", "b", "b", "a"), nrow = 2),  # non-numeric matrix
     dep_ind = 1,
     n = 100,
-    k = "log(n)"
+    ic_type = "bic"
   ), "All entries in 'mat' must be numeric")
 
   expect_error(regression_opt(
     mat =  matrix(c(1, 2, NA, 3), nrow = 2),  # non-numeric matrix
     dep_ind = 1,
     n = 100,
-    k = "log(n)"
+    ic_type = "bic"
   ), "'mat' must be a symmetric matrix.")
 
   expect_error(regression_opt(
     mat =  matrix(c(1, NA, NA, 1), nrow = 2),  # non-numeric matrix
     dep_ind = 1,
     n = 100,
-    k = "log(n)"
+    ic_type = "bic"
   ), "'mat' must not contain missing values.")
 })
 
@@ -146,7 +146,7 @@ test_that("errors in regression optimization work for data input", {
     data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
     dep_ind = 1,
     n = 100,
-    k = "log(n)"
+    ic_type = "bic"
   ), "All variables in 'data' must be numeric.")
 
   expect_error(regression_opt(
@@ -154,7 +154,7 @@ test_that("errors in regression optimization work for data input", {
     dep_ind = 1,
     mat = matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow =3),
     n = 100,
-    k = "log(n)"
+    ic_type = "bic"
   ), "All variables in 'data' must be numeric.")
 })
 
@@ -174,7 +174,7 @@ test_that("pred search works for correct specification", {
     dep_ind = dep_ind,
     possible_pred_ind = possible_pred_ind,
     n = n,
-    k = "log(n)"  # BIC penalty
+    ic_type = "bic"  # BIC penalty
   )
 
   # Basic structure checks
@@ -198,16 +198,16 @@ test_that("pred_search() keeps null model when predictors do not improve IC", {
     dep_ind = 1,
     possible_pred_ind = 2:3,
     n = n,
-    k = log(n)  # hier wirklich numerisch verwenden
+    ic_type = "bic"
   )
 
-  # Keine Prädiktoren im besten Modell
+  # No predictors in the model
   expect_equal(length(res$actual_preds), 0)
   expect_equal(length(res$actual_betas), 0)
 
-  # Residualvarianz sollte der Varianz der abhängigen Variable entsprechen (1)
+  # Residual variance should be 1 (since dep var is standardized)
   expect_equal(res$actual_resid_var, 1)
 
-  # IC sollte dem Nullmodell entsprechen – hier nur Typ checken
+  # IC shold be of type double
   expect_type(res$best_IC, "double")
 })

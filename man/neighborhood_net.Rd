@@ -9,7 +9,7 @@ neighborhood_net(
   ns = NULL,
   mat = NULL,
   n_calc = "individual",
-  k = "log(n)",
+  ic_type = "bic",
   ordered = FALSE,
   pcor_merge_rule = "and",
   missing_handling = "two-step-em",
@@ -51,10 +51,8 @@ variable.}
 for every variable.}
 }}
 
-\item{k}{Penalty term per parameter (number of predictors + 1) used in the
-node-wise regression information criterion. The default \code{k = "log(n)"},
-where \code{n} is the number of observations for the dependent variable,
-corresponds to the classical BIC. Setting \code{k = "2"} yields the classical AIC.}
+\item{ic_type}{Type of information criterion to compute for model selection in
+the node-wise regression models. Options are \code{bic} (default), \code{aic}, \code{aicc}.}
 
 \item{ordered}{Logical vector indicating whether each variable in \code{data}
 should be treated as ordered categorical. Only used when \code{data} is provided.
@@ -113,7 +111,41 @@ correlations to form the final network.
 \details{
 This function estimates a network structure using neighborhood selection guided by information criteria.
 Simulations by \insertCite{williams.2019;textual}{mantar} indicated that using the \code{"and"} rule for merging regression weights tends to yield more accurate partial correlation estimates than the \code{"or"} rule.
-Both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) are supported and have been shown to produce valid network structures.
+
+The argument \code{ic_type} specifies which information criterion is computed.
+All criteria are computed based on the log-likelihood of the maximum
+likelihood estimated regression model, where the residual variance
+determines the likelihood. The following options are available:
+
+\describe{
+
+\item{\code{"aic"}:}{
+Akaike Information Criterion \insertCite{akaike.1974}{mantar}; defined as
+\mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+number of estimated parameters (including the intercept).
+}
+
+\item{\code{"bic"}:}{
+Bayesian Information Criterion \insertCite{schwarz.1978}{mantar}; defined as
+\mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)}, where \eqn{\ell} is
+the log-likelihood of the model, \eqn{k} is the
+number of estimated parameters (including the intercept)
+and \eqn{n} is the sample size.
+}
+
+\item{\code{"aicc"}:}{
+Corrected Akaike Information Criterion \insertCite{hurvich.1989}{mantar};
+particularly useful in small samples where AIC tends to be biased.
+Defined as
+\mjseqn{\mathrm{AIC_c} = \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}},
+where \eqn{k} is the number of estimated parameters (including
+the intercept) and \eqn{n} is the sample size.
+}
+
+}
+
+\strong{Missing Handling}
 
 To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
 According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
@@ -126,7 +158,7 @@ During imputation, all variables are imputed by default using predictive mean ma
 # Estimate network from full data set
 # Using Akaike information criterion
 result <- neighborhood_net(data = mantar_dummy_full_cont,
-k = "2")
+ic_type = "aic")
 
 # View estimated partial correlations
 result$pcor
@@ -135,7 +167,8 @@ result$pcor
 # Using Bayesian Information Criterion, individual sample sizes, and two-step EM
 result_mis <- neighborhood_net(data = mantar_dummy_mis_cont,
 n_calc = "individual",
-missing_handling = "two-step-em")
+missing_handling = "two-step-em",
+ic_type = "bic")
 
 # View estimated partial correlations
 result_mis$pcor

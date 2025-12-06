@@ -23,7 +23,7 @@ test_that("summary.mantar_neighborhood() computes density and stores meta info",
   obj <- list(
     pcor = pcor,
     args = list(
-      k = "log(n)",
+      ic_type = "bic",
       pcor_merge_rule = "and",
       missing_handling = "stacked-mi",
       nimp = 20
@@ -55,7 +55,7 @@ test_that("print.summary.mantar_neighborhood() reports density and settings", {
   obj <- list(
     pcor = pcor,
     args = list(
-      k = "log(n)",
+      ic_type = "bic",
       pcor_merge_rule = "or",
       missing_handling = NULL,
       nimp = NULL
@@ -68,7 +68,7 @@ test_that("print.summary.mantar_neighborhood() reports density and settings", {
 
   expect_output(
     print(s),
-    "density of the estimated network is",  # erste Zeile
+    "density of the estimated network is",
   )
   expect_output(
     print(s),

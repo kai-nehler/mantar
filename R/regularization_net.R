@@ -43,15 +43,12 @@
 #' @param count_diagonal Logical; should observations contributing to the
 #' diagonal elements be included when computing the sample size? Only relevant
 #' when `data` is provided and `n_calc = "average"`.
-#' @param k Penalty term per parameter (number of non-zero partial correlations)
-#' used in the network information criterion. The default `k = "log(n)"`,
-#' where `n` is the sample size, corresponds to the classical BIC. Setting
-#' `k = "2"` yields the classical AIC.
-#' @param extended Logical; should the penalty in the information criterion be
-#' extended (e.g., using the EBIC instead of the BIC)? If `NULL`, the default is
-#' `TRUE` when `penalty = "glasso"` and `FALSE` otherwise.
+#' @param ic_type Character string specifying the type of information criterion
+#' used for model selection. Possible values are: `"aic"`, `"bic"`, and `"ebic"`.
+#' If no input is provided, defaults to `"ebic"` when `penalty = "glasso"` and
+#' `"bic"` otherwise.
 #' @param extended_gamma Numeric gamma parameter used in the extended information
-#' criterion calculation. Only relevant when `extended = TRUE`
+#' criterion calculation. Only relevant when `ic_type = "ebic"`.
 #' @param penalty Character string indicating the type of penalty used for
 #' regularization. Available options are described in the Details section.
 #' @param vary Character string specifying which penalty parameter(s) are varied
@@ -165,14 +162,48 @@
 #'
 #' }
 #'
+#' \strong{Information Criteria}
+#'
+#' The argument `ic_type` specifies which information criterion is computed.
+#' All criteria are computed based on the log-likelihood of the estimated model.
+#'
+#' \describe{
+#'
+#'   \item{\code{"aic"}:}{
+#'     Akaike Information Criterion \insertCite{akaike.1974}{mantar};
+#'     defined as
+#'     \mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+#'     where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+#'     number of freely estimated edge parameters (non-zero edges).
+#'   }
+#'
+#'   \item{\code{"bic"}:}{
+#'     Bayesian Information Criterion \insertCite{schwarz.1978}{mantar};
+#'     defined as
+#'     \mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)},
+#'     where \eqn{\ell} is the log-likelihood of the model, \eqn{k} is the
+#'     number of freely estimated edge parameters (non-zero edges), and \eqn{n} is the sample size.
+#'   }
+#'
+#'   \item{\code{"ebic"}:}{
+#'     Extended Bayesian Information Criterion \insertCite{chen.2008}{mantar};
+#'     particularly useful in high-dimensional settings. Defined as
+#'     \mjseqn{\mathrm{EBIC} = -2 \ell + k \log(n) + 4 \gamma k \log(p)},
+#'     where \eqn{\ell} is the log-likelihood, \eqn{k} is the number of freely
+#'     estimated edges (non-zero edges), \eqn{n} is the sample size, \eqn{p} is the number of
+#'     variables, and \eqn{\gamma} is the extended-penalty parameter.
+#'   }
+#'
+#' }
+#'
 #' \strong{Conditional Defaults}
 #'
 #' By default, some tuning parameters depend on the chosen penalty.
 #' Specifically, when `penalty = "glasso"`, the number of lambda
-#' values `n_lambda` defaults to `100` and `extended`
-#' defaults to `TRUE`. For all other penalties, the defaults are
-#' `n_lambda = 50` and `extended = FALSE`. These defaults can
-#' be overridden by specifying `n_lambda` and/or `extended`
+#' values `n_lambda` defaults to `100` and `ic_type`
+#' defaults to `"ebic"`. For all other penalties, the defaults are
+#' `n_lambda = 50` and `ic_type = "bic"`. These defaults can
+#' be overridden by specifying `n_lambda` and/or `ic_type`
 #' explicitly.
 #'
 #' \strong{Missing Handling}
@@ -222,7 +253,7 @@
 #'
 regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
                                likelihood = "obs_based", n_calc = "average", count_diagonal = TRUE,
-                               k = "log(n)", extended = NULL,
+                               ic_type = NULL,
                                extended_gamma = 0.5,
                                penalty = "atan",
                                vary = "lambda", n_lambda = NULL,
@@ -243,12 +274,15 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
   likelihood <- match.arg(tolower(likelihood),
                           choices = c("obs_based", "mat_based"))
 
-  # Set conditional defaults for the extended and n_lambda arguments
-  if (is.null(extended)) {
-    extended <- identical(penalty, "glasso")
-  }
+  # Set conditional defaults for the ic_type and n_lambda arguments
   if (is.null(n_lambda)) {
     n_lambda <- if (identical(penalty, "glasso")) 100 else 50
+  }
+  if (!is.null(ic_type)){
+    ic_type <- match.arg(tolower(ic_type),
+                            choices = c("aic", "bic", "ebic"))
+  } else {
+    ic_type <- if (identical(penalty, "glasso")) "ebic" else "bic"
   }
 
   # Check: Which input is provided?
@@ -307,9 +341,8 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     data = data,
     means = means,
     n = n,
-    k = k,
     likelihood = likelihood,
-    extended = extended,
+    ic_type = ic_type,
     extended_gamma = extended_gamma,
     penalty = penalty,
     vary = vary,
@@ -328,7 +361,7 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     cor_method = cor_method,
     full_results = mod$full_results,
     args = list(likelihood = likelihood, n_calc = n_calc, count_diagonal = count_diagonal,
-                k = k, extended = extended, extended_gamma = extended_gamma,
+                ic_type = ic_type, extended_gamma = extended_gamma,
                 penalty = penalty, vary = vary, n_lambda = n_lambda,
                 lambda_min_ratio = lambda_min_ratio, n_gamma = n_gamma,
                 pen_diag = pen_diag, lambda = lambda, gamma = gamma,
@@ -350,9 +383,8 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
 #' @param data Optional raw data matrix or data frame containing the variables
 #' @param means Optional vector of variable means.
 #' @param n Effective sample size.
-#' @param k Penalty term per parameter used in the information criterion.
 #' @param likelihood Character string specifying how the log-likelihood is computed.
-#' @param extended Logical; should the penalty in the information criterion be extended?
+#' @param ic_type Character string specifying the type of information criterion used for model selection.
 #' @param extended_gamma Numeric gamma parameter used in the extended information criterion calculation.
 #' @param penalty Character string indicating the type of penalty used for regularization.
 #' @param vary Character string specifying which penalty parameter(s) are varied during regularization.
@@ -373,8 +405,8 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
 #'                       the corresponding penalty matrix `rho_mat`.}
 #' }
 #' @noRd
-regularization_sel <- function(mat, data = NULL, means = NULL, n, k,
-                               likelihood, extended, extended_gamma,
+regularization_sel <- function(mat, data = NULL, means = NULL, n,
+                               likelihood, ic_type, extended_gamma,
                                penalty = "glasso", vary = "lambda",
                                n_lambda = 50,
                                lambda_min_ratio = 0.01,
@@ -423,8 +455,7 @@ regularization_sel <- function(mat, data = NULL, means = NULL, n, k,
                                theta = cand_net$wi,
                                mu = means,
                                n = n,
-                               k = k,
-                               extended = extended,
+                               ic_type = ic_type,
                                extended_gamma = extended_gamma,
                                likelihood = likelihood)
     # store penalty matrix

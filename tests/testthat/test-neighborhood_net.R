@@ -20,30 +20,30 @@ test_that("errors in neighborhood network selection work for mat input", {
   # Test with incorrect mat type
   expect_error(neighborhood_net(
     mat =  matrix(c("a", "b", "b", "a"), nrow = 2),  # non-numeric matrix
-    k = "log(n)"
+    ic_type = "bic"
   ), "All entries in 'mat' must be numeric")
 
   expect_error(neighborhood_net(
     mat =  matrix(c(1, 2, NA, 3), nrow = 2),  # non-numeric matrix
-    k = "log(n)"
+    ic_type = "bic"
   ), "'mat' must be a symmetric matrix.")
 
   expect_error(neighborhood_net(
     mat =  matrix(c(1, NA, NA, 1), nrow = 2),  # non-numeric matrix
-    k = "log(n)"
+    ic_type = "bic"
   ), "'mat' must not contain missing values.")
 })
 
 test_that("errors in neighborhood network selection work for data input", {
   expect_error(neighborhood_net(
     data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
-    k = "log(n)"
+    ic_type = "bic"
   ), "All variables in 'data' must be numeric.")
 
   expect_error(neighborhood_net(
     data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
     mat = matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow =3),
-    k = "log(n)"
+    ic_type = "bic"
   ), "All variables in 'data' must be numeric.")
 })
 
@@ -76,7 +76,7 @@ test_that("neighborhood_net() works with mat + ns input", {
   expect_equal(result$ns, rep(ns, p))
 
   # args: missing infos should be NULL
-  expect_equal(result$args$k, "log(n)")
+  expect_equal(result$args$ic_type, "bic")
   expect_null(result$args$cor_method)
   expect_null(result$args$missing_handling)
   expect_null(result$args$nimp)
@@ -105,7 +105,7 @@ test_that("neighborhood_sel() returns zero network for identity correlation matr
   ns  <- rep(100, 3)
   k   <- log(100)
 
-  res <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = "and")
+  res <- neighborhood_sel(mat = mat, ns = ns, ic_type = "bic", pcor_merge_rule = "and")
 
   expect_type(res, "list")
   expect_named(res, c("partials", "beta_mat"))

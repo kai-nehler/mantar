@@ -25,9 +25,8 @@
 #'   all variables.}
 #'   \item{`"total"`}{Uses the total number of rows in `data`.}
 #' }
-#' @param k Penalty per parameter (number of predictors + 1) used in the
-#' information criterion. The default `k = "log(n)"` corresponds to the
-#' classical BIC. Setting `k = 2` yields the classical AIC.
+#' @param ic_type Type of information criterion to compute for model selection.
+#' Options are `bic` (default), `aic`, `aicc`.
 #' @param ordered Logical vector indicating whether each variable in `data`
 #' should be treated as ordered categorical when computing the correlation
 #' matrix. If a single logical value is supplied, it is recycled to all
@@ -61,6 +60,8 @@
 #'  }
 #'
 #' @details
+#' \loadmathjax
+#'
 #' This function performs stepwise model selection for multiple regression
 #' using information criteria. It was originally developed as a component of
 #' the neighborhood selection framework for network estimation
@@ -72,6 +73,42 @@
 #' making it suitable for situations in which classical methods fail or produce
 #' biased results.
 #'
+#' The argument `ic_type` specifies which information criterion is computed.
+#' All criteria are computed based on the log-likelihood of the maximum
+#' likelihood estimated regression model, where the residual variance
+#' determines the likelihood. The following options are available:
+#'
+#' \describe{
+#'
+#'   \item{\code{"aic"}:}{
+#'     Akaike Information Criterion \insertCite{akaike.1974}{mantar}; defined as
+#'     \mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+#'     where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+#'     number of estimated parameters (including the intercept).
+#'   }
+#'
+#'   \item{\code{"bic"}:}{
+#'     Bayesian Information Criterion \insertCite{schwarz.1978}{mantar}; defined as
+#'    \mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)}, where \eqn{\ell} is
+#'     the log-likelihood of the model, \eqn{k} is the
+#'     number of estimated parameters (including the intercept)
+#'     and \eqn{n} is the sample size.
+#'   }
+#'
+#'   \item{\code{"aicc"}:}{
+#'     Corrected Akaike Information Criterion \insertCite{hurvich.1989}{mantar};
+#'     particularly useful in small samples where AIC tends to be biased.
+#'     Defined as
+#'      \mjseqn{\mathrm{AIC_c} = \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}},
+#'     where \eqn{k} is the number of estimated parameters (including
+#'     the intercept) and \eqn{n} is the sample size.
+#'   }
+#'
+#' }
+#'
+#' @references
+#' \insertAllCited{}
+#'
 #' @export
 #'
 #' @examples
@@ -80,7 +117,7 @@
 #' result <- regression_opt(
 #'   data = mantar_dummy_full_cont,
 #'   dep_ind = 1,
-#'   k = "2"
+#'   ic_type = "aic"
 #' )
 #'
 #' # View regression coefficients and R-squared
@@ -96,16 +133,18 @@
 #'  dep_ind = 2,
 #'  n_calc = "individual",
 #'  missing_handling = "two-step-em",
+#'  ic_type = "bic"
 #'  )
 #'
 #'  # View regression coefficients and R-squared
 #'  result_mis$regression
 #'  result_mis$R2
 regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
-                           n_calc = "individual", k = "log(n)", ordered = FALSE,
+                           n_calc = "individual", ic_type = "bic", ordered = FALSE,
                            missing_handling = "stacked-mi", nimp = 20, imp_method = "pmm", ...) {
 
   # Argument checks
+  ic_type <- match.arg(tolower(ic_type), choices = c("aic", "bic", "aicc"))
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
 
@@ -163,7 +202,7 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
   # Search for the optimal regression model
   mod <- pred_search(mat = mat, dep_ind = dep_ind,
                          possible_pred_ind = setdiff(1:ncol(mat), dep_ind),
-                     n = n, k = k)
+                     n = n, ic_type = ic_type)
 
   # Retrive the estimated beta weights and assign names
   regression <- mod$actual_betas
@@ -174,7 +213,7 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
     regression = regression,
     R2 = 1 - mod$actual_resid_var,
     n = n,
-    args = list(k = k, cor_method = cor_method, missing_handling = missing_handling,
+    args = list(ic_type = ic_type, cor_method = cor_method, missing_handling = missing_handling,
                 nimp = nimp, imp_method = imp_method)
   )
 
@@ -196,8 +235,8 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
 #' @param dep_ind Index of the dependent variable in of `mat`
 #' @param possible_pred_ind Vector of indices for the possible predictor variables in `mat`
 #' @param n Sample size for information criteria calculation
-#' @param k Penalty term used in the information criteria. Defaults to `log(n)` (BIC).
-#' Set to `2` for AIC.
+#' @param ic_type Type of information criterion to compute.
+#' Options: "AIC", "BIC", "AICc"
 #'
 #' @returns
 #' A list with the following elements:
@@ -208,11 +247,11 @@ regression_opt <- function(data = NULL, n = NULL, mat = NULL, dep_ind,
 #'   \item{best_IC}{Information criterion value of the final model.}
 #' }
 #' @noRd
-pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
+pred_search <- function(mat, dep_ind, possible_pred_ind, n, ic_type = "bic"){
 
   # Compute Null Model and the corresponding Information Criterion
   null_mod <- matrix_regression(mat = mat, dep_ind = dep_ind, pred_ind = NULL)
-  null_IC <- reg_ic_calc(resid_var = null_mod$resid_var, n = n, n_preds = 0, k = k)
+  null_IC <- reg_ic_calc(resid_var = null_mod$resid_var, n = n, n_preds = 0, ic_type = ic_type)
 
   # initialize vector for actual predictors
   actual_preds <- c()
@@ -257,7 +296,7 @@ pred_search <- function(mat, dep_ind, possible_pred_ind, n, k = log(n)){
         IC <- null_IC
       } else {
         # if there are predictors, calculate the information criteria for the model
-        IC <- reg_ic_calc(resid_var = mod_resid_var, n = n, n_preds = length(mod_preds), k = k)
+        IC <- reg_ic_calc(resid_var = mod_resid_var, n = n, n_preds = length(mod_preds), ic_type = ic_type)
       }
 
       return(list(IC = IC, mod_preds = mod_preds, mod_betas = mod_betas, mod_resid_var = mod_resid_var))

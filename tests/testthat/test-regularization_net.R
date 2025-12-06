@@ -21,7 +21,7 @@ test_that("regularization_net() works with full data and glasso defaults", {
   expect_equal(res$args$penalty, "glasso")
   expect_equal(res$args$likelihood, "obs_based")
   expect_equal(res$args$n_lambda, 100)
-  expect_true(res$args$extended)
+  expect_equal(res$args$ic_type, "ebic")
 })
 
 test_that("regularization_net() sets conditional defaults for extended and n_lambda", {
@@ -37,11 +37,11 @@ test_that("regularization_net() sets conditional defaults for extended and n_lam
   )
 
   # glasso
-  expect_true(res_glasso$args$extended)
+  expect_equal(res_glasso$args$ic_type, "ebic")
   expect_equal(res_glasso$args$n_lambda, 100)
 
   # atan
-  expect_false(res_atan$args$extended)
+  expect_equal(res_atan$args$ic_type, "bic")
   expect_equal(res_atan$args$n_lambda, 50)
 })
 
@@ -126,9 +126,8 @@ test_that("regularization_sel() runs and returns expected structure for glasso",
     data       = NULL,
     means      = NULL,
     n          = n,
-    k          = "log(n)",
     likelihood = "mat_based",
-    extended   = FALSE,
+    ic_type   = "bic",
     extended_gamma = 0.5,
     penalty    = "glasso",
     vary       = "lambda",

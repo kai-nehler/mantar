@@ -34,10 +34,8 @@
 #'   \item{`"total"`}{Uses the total number of rows in `data` as the sample size
 #'   for every variable.}
 #' }
-#' @param k Penalty term per parameter (number of predictors + 1) used in the
-#' node-wise regression information criterion. The default `k = "log(n)"`,
-#' where `n` is the number of observations for the dependent variable,
-#' corresponds to the classical BIC. Setting `k = "2"` yields the classical AIC.
+#' @param ic_type Type of information criterion to compute for model selection in
+#' the node-wise regression models. Options are `bic` (default), `aic`, `aicc`.
 #' @param ordered Logical vector indicating whether each variable in `data`
 #' should be treated as ordered categorical. Only used when `data` is provided.
 #' If a single logical value is supplied, it is recycled to all variables.
@@ -75,7 +73,41 @@
 #' @details
 #' This function estimates a network structure using neighborhood selection guided by information criteria.
 #' Simulations by \insertCite{williams.2019;textual}{mantar} indicated that using the `"and"` rule for merging regression weights tends to yield more accurate partial correlation estimates than the `"or"` rule.
-#' Both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) are supported and have been shown to produce valid network structures.
+#'
+#' The argument `ic_type` specifies which information criterion is computed.
+#' All criteria are computed based on the log-likelihood of the maximum
+#' likelihood estimated regression model, where the residual variance
+#' determines the likelihood. The following options are available:
+#'
+#' \describe{
+#'
+#'   \item{\code{"aic"}:}{
+#'     Akaike Information Criterion \insertCite{akaike.1974}{mantar}; defined as
+#'     \mjseqn{\mathrm{AIC} = -2 \ell + 2k},
+#'     where \eqn{\ell} is the log-likelihood of the model and \eqn{k} is the
+#'     number of estimated parameters (including the intercept).
+#'   }
+#'
+#'   \item{\code{"bic"}:}{
+#'     Bayesian Information Criterion \insertCite{schwarz.1978}{mantar}; defined as
+#'    \mjseqn{\mathrm{BIC} = -2 \ell + k \log(n)}, where \eqn{\ell} is
+#'     the log-likelihood of the model, \eqn{k} is the
+#'     number of estimated parameters (including the intercept)
+#'     and \eqn{n} is the sample size.
+#'   }
+#'
+#'   \item{\code{"aicc"}:}{
+#'     Corrected Akaike Information Criterion \insertCite{hurvich.1989}{mantar};
+#'     particularly useful in small samples where AIC tends to be biased.
+#'     Defined as
+#'      \mjseqn{\mathrm{AIC_c} = \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}},
+#'     where \eqn{k} is the number of estimated parameters (including
+#'     the intercept) and \eqn{n} is the sample size.
+#'   }
+#'
+#' }
+#'
+#' \strong{Missing Handling}
 #'
 #' To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
 #' According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
@@ -102,7 +134,7 @@
 #' # Estimate network from full data set
 #' # Using Akaike information criterion
 #' result <- neighborhood_net(data = mantar_dummy_full_cont,
-#' k = "2")
+#' ic_type = "aic")
 #'
 #' # View estimated partial correlations
 #' result$pcor
@@ -111,16 +143,18 @@
 #' # Using Bayesian Information Criterion, individual sample sizes, and two-step EM
 #' result_mis <- neighborhood_net(data = mantar_dummy_mis_cont,
 #' n_calc = "individual",
-#' missing_handling = "two-step-em")
+#' missing_handling = "two-step-em",
+#' ic_type = "bic")
 #'
 #' # View estimated partial correlations
 #' result_mis$pcor
-neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", k = "log(n)",
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", ic_type = "bic",
                              ordered = FALSE, pcor_merge_rule = "and",
                              missing_handling = "two-step-em",
                               nimp = 20, imp_method = "pmm", ...){
 
   # Match arguments
+  ic_type <- match.arg(tolower(ic_type), choices = c("bic", "aic", "aicc"))
   n_calc <- match.arg(tolower(n_calc), choices =c("average", "individual", "max", "total"))
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
@@ -165,14 +199,14 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
   }
 
   # Call helper function to perform neighborhood selection
-  mod <- neighborhood_sel(mat = mat, ns = ns, k = k, pcor_merge_rule = pcor_merge_rule)
+  mod <- neighborhood_sel(mat = mat, ns = ns, ic_type = ic_type, pcor_merge_rule = pcor_merge_rule)
 
   # Prepare result
   result <- list(
     pcor = mod$partials,
     betas = mod$beta_mat,
     ns = ns,
-    args = list(k = k, cor_method = cor_method, pcor_merge_rule = pcor_merge_rule,
+    args = list(ic_type = ic_type, cor_method = cor_method, pcor_merge_rule = pcor_merge_rule,
                 missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
   )
 
@@ -192,7 +226,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
 #'
 #' @param mat Correlation matrix
 #' @param ns Sample sizes per variable
-#' @param k Penalty term for information criterion
+#' @param ic_type Type of information criterion for model selection
 #' @param pcor_merge_rule Rule for merging regression weights into partial correlations
 #'
 #' @returns
@@ -204,7 +238,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
 #' }
 #'
 #' @noRd
-neighborhood_sel <- function(mat, ns, k, pcor_merge_rule){
+neighborhood_sel <- function(mat, ns, ic_type, pcor_merge_rule){
 
   # be sure that mat is of class matrix and inputs match is valid
   class(mat) <- "matrix"
@@ -223,7 +257,7 @@ neighborhood_sel <- function(mat, ns, k, pcor_merge_rule){
     n <- ns[dep]
     # perform neighorhood selection for dependent node
     mod <- pred_search(mat = mat, dep_ind = dep, possible_pred_ind = possible_preds,
-                  n = n, k = k)
+                  n = n, ic_type = ic_type)
     # store regression coefficients in beta matrix
     beta_mat[dep, mod$actual_preds] <- mod$actual_betas
   }
