@@ -32,19 +32,18 @@ The current stable version (0.2.0) is [available on CRAN](https://cran.r-project
 install.packages("mantar")
 ```
 
-You can install the development version of `mantar` from [GitHub](https://github.com/kai-nehler/mantar). Before installing, make sure your system is able to compile packages from source. You can verify this using:
+You can install the development version of `mantar` from 
+[GitHub](https://github.com/kai-nehler/mantar). To do so, you need the `remotes` package.
 
-```{r, systemcheck}
-pkgbuild::check_build_tools()
+```{r, remotecheck, echo = FALSE}
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
 ```
 
-If build tools are missing or outdated, you may need to install/update appropriate development tools (e.g. Rtools for Windows) for your operating system.
-
-Once your system is ready, install the development branch via:
-
-```{r, pakinstall}
-# install.packages("pak")
-pak::pak("kai-nehler/mantar@develop")
+```{r, remoteinstall}
+# install.packages("remotes")
+remotes::install_github("kai-nehler/mantar@develop")
 ```
 
 The extension `@develop` ensures that you get the latest development version of the package, which may include new features and bug fixes not yet available in the stable release on CRAN. Exluding this extension will install the same version as the one on CRAN.
@@ -108,10 +107,14 @@ The `neighborhood_net()` function estimates a network structure based on neighbo
 
 #### Information Criteria
 
-The `k` argument controls the penalty used in model selection for node-wise regressions. It reflects the penalty per parameter (i.e., number of predictors + 1):
+The `ic_type` argument controls the penalty applied during model selection for 
+node-wise regressions. It defines the penalty per parameter (i.e., the number of 
+predictors plus the intercept), thereby influencing the sparsity of the resulting 
+model. The available options are:
 
-- `k = "log(n)"` (default): corresponds to the **Bayesian Information Criterion (BIC)**
-- `k = "2"`: corresponds to the **Akaike Information Criterion (AIC)**
+- `ic_type = "bic"` (default): corresponds to the **Bayesian Information Criterion (BIC)**
+- `ic_type = "aic"`: corresponds to the **Akaike Information Criterion (AIC)**
+- `ic_type = "aicc"`: corresponds to the **corrected Akaike Information Criterion (AICc)**
 
 #### Estimation of Partial Correlation 
 
@@ -146,9 +149,9 @@ After discussing the key arguments, we can now illustrate how to estimate a netw
 ```{r example_network}
 # Estimate network from full data set using BIC, the and rule as well as treating the data as continuous
 result_full_cont <- neighborhood_net(data = mantar_dummy_full_cont, 
-                                             k = "log(n)", 
-                           pcor_merge_rule = "and",
-                           ordered = FALSE)
+                                     ic_type = "bic", 
+                                     pcor_merge_rule = "and",
+                                     ordered = FALSE)
 
 # View estimated partial correlations
 result_full_cont
@@ -167,7 +170,7 @@ We can also estimate a network structure when some variables are ordered categor
 # Estimate network from full data set using BIC, the and rule as well as treating the
 # data as ordered categorical
 result_full_cat <- neighborhood_net(data = mantar_dummy_full_cat,
-                                    k = "log(n)", 
+                                    ic_type = "bic",  
                                     pcor_merge_rule = "and",
                                     ordered = TRUE)
 
@@ -243,7 +246,21 @@ The last argument controlling the regularization process is `pen_diag` which spe
 
 #### Information Criteria
 
-The `k` argument controls the penalty used in model selection for the regularization process. It reflects the penalty per parameter (in this case for every included edge / nonzero partial correlation). The default value is `k = "log(n)"`, which corresponds to the **Bayesian Information Criterion (BIC)**. Another option is `k = "2"`, which corresponds to the **Akaike Information Criterion (AIC)**. The function also offers using the extended version of the information criteria via `extended = TRUE` (especially helpful to specify extended BIC). In this case, an additional parameter `extended_gamma` can be specified (default: `0.5`). The default of `extended` depends on the penalty type as the `"glasso"` penalty generally does generally use the extended version, while non-convex penalties do not.
+The `ic_type` argument determines the information-criterion penalty used during 
+model selection in the regularization process. It specifies the penalty applied 
+per freely estimated parameter (i.e., each included edge or nonzero partial 
+correlation), thereby controlling the sparsity of the resulting model. 
+The available options are:
+
+- `ic_type = "bic"` (default): corresponds to the **Bayesian Information Criterion (BIC)**
+- `ic_type = "ebic"`: corresponds to the **Extended Bayesian Information Criterion (EBIC)**
+- `ic_type = "aic"`: corresponds to the **Akaike Information Criterion (AIC)**
+
+The default depends on the selected regularization approach. For non-convex 
+penalties, the default is `"bic"`, whereas for the `"glasso"` penalty the default 
+is `"ebic"`. In the latter case, an additional parameter `extended_gamma` must be 
+specified (default: `0.5`).
+
 
 #### Type of Correlation
 
@@ -272,9 +289,7 @@ result_full_cont <- regularization_net(data = mantar_dummy_full_cont,
                                       vary = "lambda",
                                       n_lambda = 100,
                                       lambda_min_ratio = 0.1,
-                                      k = "log(n)",
-                                      extended = TRUE, 
-                                      extended_gamma = 0.5,
+                                      ic_type = "bic", 
                                       pcor_merge_rule = "and",
                                       ordered = FALSE)
 
@@ -323,8 +338,7 @@ result_mis_cont <- regularization_net(data = mantar_dummy_mis_cont,
                                      vary = "lambda",
                                      n_lambda = 100,
                                      lambda_min_ratio = 0.1,
-                                     k = "log(n)",
-                                     extended = TRUE,
+                                     ic_type = "ebic",
                                      extended_gamma = 0.5,
                                      n_calc = "average",
                                      missing_handling = "two-step-em",

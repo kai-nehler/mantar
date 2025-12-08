@@ -30,66 +30,29 @@ install.packages("mantar")
 ```
 
 You can install the development version of `mantar` from
-[GitHub](https://github.com/kai-nehler/mantar). Before installing, make
-sure your system is able to compile packages from source. You can verify
-this using:
+[GitHub](https://github.com/kai-nehler/mantar). To do so, you need the
+`remotes` package.
 
 ``` r
-pkgbuild::check_build_tools()
-#> Your system is ready to build packages!
-```
-
-If build tools are missing or outdated, you may need to install/update
-appropriate development tools (e.g. Rtools for Windows) for your
-operating system.
-
-Once your system is ready, install the development branch via:
-
-``` r
-# install.packages("pak")
-pak::pak("kai-nehler/mantar@develop")
-#> ! Using bundled GitHub PAT. Please add your own PAT using `gitcreds::gitcreds_set()`.
-#> 
-#> ✔ Updated metadata database: 3.25 MB in 8 files.
-#> 
-#> ℹ Updating metadata database
-#> ✔ Updating metadata database ... done
-#> 
-#> 
-#> → Will install 4 packages.
-#> → Will update 1 package.
-#> → Will download 4 CRAN packages (2.62 MB).
-#> → Will download 1 package with unknown size.
-#> + glassoFast         1.0.1 [bld][cmp][dl] (5.43 kB)
-#> + mantar     0.2.0 → 0.2.0 [bld][cmp][dl] (GitHub: bd97012)
-#> + mathjaxr           1.8-0 [bld][cmp][dl] (1.06 MB)
-#> + rbibutils          2.4   [bld][cmp][dl] (1.17 MB)
-#> + Rdpack             2.6.4 [bld][dl] (379.14 kB)
-#> 
-#> ℹ Getting 4 pkgs (2.62 MB) and 1 pkg with unknown size
-#> ✔ Got glassoFast 1.0.1 (source) (5.43 kB)
-#> ✔ Got rbibutils 2.4 (source) (1.17 MB)
-#> ✔ Got Rdpack 2.6.4 (source) (379.14 kB)
-#> ✔ Got mathjaxr 1.8-0 (source) (1.06 MB)
-#> ✔ Got mantar 0.2.0 (source) (240.00 kB)
-#> ℹ Building glassoFast 1.0.1
-#> ℹ Building mathjaxr 1.8-0
-#> ℹ Building rbibutils 2.4
-#> ✔ Built glassoFast 1.0.1 (1.1s)
-#> ✔ Installed glassoFast 1.0.1  (1s)
-#> ✔ Built mathjaxr 1.8-0 (2.2s)
-#> ✔ Installed mathjaxr 1.8-0  (34ms)
-#> ✔ Built rbibutils 2.4 (10.4s)
-#> ✔ Installed rbibutils 2.4  (38ms)
-#> ℹ Building Rdpack 2.6.4
-#> ✔ Built Rdpack 2.6.4 (2.3s)
-#> ✔ Installed Rdpack 2.6.4  (19ms)
-#> ℹ Packaging mantar 0.2.0
-#> ✔ Packaged mantar 0.2.0 (2.1s)
-#> ℹ Building mantar 0.2.0
-#> ✔ Built mantar 0.2.0 (1.1s)
-#> ✔ Installed mantar 0.2.0 (github::kai-nehler/mantar@bd97012) (1s)
-#> ✔ 1 pkg + 6 deps: kept 1, upd 1, added 4, dld 5 (NA B) [25.3s]
+# install.packages("remotes")
+remotes::install_github("kai-nehler/mantar@develop")
+#> Downloading GitHub repo kai-nehler/mantar@develop
+#> mathjaxr (1.8-0 -> 2.0-0) [CRAN]
+#> Installing 1 packages: mathjaxr
+#> Installing package into '/tmp/RtmpG5ymF7/temp_libpathedfc3de43bdf'
+#> (as 'lib' is unspecified)
+#> ── R CMD build ─────────────────────────────────────────────────────────────────
+#> * checking for file ‘/tmp/RtmpSjQdY9/remotes231c026ea675e/kai-nehler-mantar-d566ced/DESCRIPTION’ ... OK
+#> * preparing ‘mantar’:
+#> * checking DESCRIPTION meta-information ... OK
+#> * installing the package to process help pages
+#> Loading required namespace: mantar
+#> * saving partial Rd database
+#> * checking for LF line-endings in source and make files and shell scripts
+#> * checking for empty or unneeded directories
+#> * building ‘mantar_0.2.0.tar.gz’
+#> Installing package into '/tmp/RtmpG5ymF7/temp_libpathedfc3de43bdf'
+#> (as 'lib' is unspecified)
 ```
 
 The extension `@develop` ensures that you get the latest development
@@ -260,13 +223,18 @@ controlling the network estimation process (with fully observed data):
 
 #### Information Criteria
 
-The `k` argument controls the penalty used in model selection for
-node-wise regressions. It reflects the penalty per parameter (i.e.,
-number of predictors + 1):
+The `ic_type` argument controls the penalty applied during model
+selection for node-wise regressions. It defines the penalty per
+parameter (i.e., the number of predictors plus the intercept), thereby
+influencing the sparsity of the resulting model. The available options
+are:
 
-- `k = "log(n)"` (default): corresponds to the **Bayesian Information
+- `ic_type = "bic"` (default): corresponds to the **Bayesian Information
   Criterion (BIC)**
-- `k = "2"`: corresponds to the **Akaike Information Criterion (AIC)**
+- `ic_type = "aic"`: corresponds to the **Akaike Information Criterion
+  (AIC)**
+- `ic_type = "aicc"`: corresponds to the **corrected Akaike Information
+  Criterion (AICc)**
 
 #### Estimation of Partial Correlation
 
@@ -314,9 +282,9 @@ with a data set without missing values.
 ``` r
 # Estimate network from full data set using BIC, the and rule as well as treating the data as continuous
 result_full_cont <- neighborhood_net(data = mantar_dummy_full_cont, 
-                                             k = "log(n)", 
-                           pcor_merge_rule = "and",
-                           ordered = FALSE)
+                                     ic_type = "bic", 
+                                     pcor_merge_rule = "and",
+                                     ordered = FALSE)
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
 
 # View estimated partial correlations
@@ -345,7 +313,7 @@ sum_result_full_cont <- summary(result_full_cont)
 sum_result_full_cont
 #> The density of the estimated network is 0.250
 #> 
-#> Network was estimated using neighborhood selection with a penalty term of log(n)
+#> Network was estimated using neighborhood selection with a penalty term of bic
 #> and the 'and' rule for the inclusion of edges based on a full data set.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
@@ -365,7 +333,7 @@ categorical.
 # Estimate network from full data set using BIC, the and rule as well as treating the
 # data as ordered categorical
 result_full_cat <- neighborhood_net(data = mantar_dummy_full_cat,
-                                    k = "log(n)", 
+                                    ic_type = "bic",  
                                     pcor_merge_rule = "and",
                                     ordered = TRUE)
 #> No missing values in data. Sample size for each variable is equal to the number of rows in the data.
@@ -396,7 +364,7 @@ sum_result_full_cat <- summary(result_full_cat)
 sum_result_full_cat
 #> The density of the estimated network is 0.250
 #> 
-#> Network was estimated using neighborhood selection with a penalty term of log(n)
+#> Network was estimated using neighborhood selection with a penalty term of bic
 #> and the 'and' rule for the inclusion of edges based on a full data set.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
@@ -499,7 +467,7 @@ sum_result_mis_cont
 #> 
 #> Network was estimated using neighborhood selection on data with missing values.
 #> Missing data were handled using 'two-step-em'.
-#> The penalty term was log(n) and the 'and' rule was used for edge inclusion.
+#> The penalty term was bic and the 'and' rule was used for edge inclusion.
 #> 
 #> The sample sizes used for the nodewise regressions were as follows:
 #> EmoReactivity     TendWorry    StressSens     SelfAware     Moodiness 
@@ -545,18 +513,23 @@ should be penalized (`TRUE`) or not (`FALSE`, default).
 
 #### Information Criteria
 
-The `k` argument controls the penalty used in model selection for the
-regularization process. It reflects the penalty per parameter (in this
-case for every included edge / nonzero partial correlation). The default
-value is `k = "log(n)"`, which corresponds to the **Bayesian Information
-Criterion (BIC)**. Another option is `k = "2"`, which corresponds to the
-**Akaike Information Criterion (AIC)**. The function also offers using
-the extended version of the information criteria via `extended = TRUE`
-(especially helpful to specify extended BIC). In this case, an
-additional parameter `extended_gamma` can be specified (default: `0.5`).
-The default of `extended` depends on the penalty type as the `"glasso"`
-penalty generally does generally use the extended version, while
-non-convex penalties do not.
+The `ic_type` argument determines the information-criterion penalty used
+during model selection in the regularization process. It specifies the
+penalty applied per freely estimated parameter (i.e., each included edge
+or nonzero partial correlation), thereby controlling the sparsity of the
+resulting model. The available options are:
+
+- `ic_type = "bic"` (default): corresponds to the **Bayesian Information
+  Criterion (BIC)**
+- `ic_type = "ebic"`: corresponds to the **Extended Bayesian Information
+  Criterion (EBIC)**
+- `ic_type = "aic"`: corresponds to the **Akaike Information Criterion
+  (AIC)**
+
+The default depends on the selected regularization approach. For
+non-convex penalties, the default is `"bic"`, whereas for the `"glasso"`
+penalty the default is `"ebic"`. In the latter case, an additional
+parameter `extended_gamma` must be specified (default: `0.5`).
 
 #### Type of Correlation
 
@@ -593,37 +566,37 @@ result_full_cont <- regularization_net(data = mantar_dummy_full_cont,
                                       vary = "lambda",
                                       n_lambda = 100,
                                       lambda_min_ratio = 0.1,
-                                      k = "log(n)",
-                                      extended = TRUE, 
-                                      extended_gamma = 0.5,
+                                      ic_type = "bic", 
                                       pcor_merge_rule = "and",
                                       ordered = FALSE)
+#> Warning in def_pen_mats(mat = mat, penalty = penalty, vary = vary, n_lambda =
+#> n_lambda, : Varying 'lambda' only, n_gamma is set to 1.
 
 # View estimated partial correlations
 result_full_cont
 #>               EmoReactivity TendWorry  StressSens  SelfAware  Moodiness
-#> EmoReactivity    0.00000000 0.1947651  0.05726695 0.00000000 0.00000000
-#> TendWorry        0.19476514 0.0000000  0.00000000 0.17447288 0.00000000
-#> StressSens       0.05726695 0.0000000  0.00000000 0.00000000 0.00000000
-#> SelfAware        0.00000000 0.1744729  0.00000000 0.00000000 0.00000000
+#> EmoReactivity    0.00000000 0.2094365  0.08045204 0.00000000 0.00000000
+#> TendWorry        0.20943651 0.0000000  0.00000000 0.19091266 0.00000000
+#> StressSens       0.08045204 0.0000000  0.00000000 0.00000000 0.00000000
+#> SelfAware        0.00000000 0.1909127  0.00000000 0.00000000 0.00000000
 #> Moodiness        0.00000000 0.0000000  0.00000000 0.00000000 0.00000000
-#> Cautious         0.06142038 0.0000000  0.00000000 0.00000000 0.38632297
-#> ThoughtFuture    0.07236467 0.2030423  0.00000000 0.00000000 0.01130336
-#> RespCriticism    0.00000000 0.0000000 -0.01643745 0.04990513 0.24301446
+#> Cautious         0.07143541 0.0000000  0.00000000 0.00000000 0.39918941
+#> ThoughtFuture    0.08279610 0.2160799  0.00000000 0.01126785 0.02095296
+#> RespCriticism    0.01204568 0.0000000 -0.03899045 0.06692828 0.25264236
 #>                 Cautious ThoughtFuture RespCriticism
-#> EmoReactivity 0.06142038    0.07236467    0.00000000
-#> TendWorry     0.00000000    0.20304232    0.00000000
-#> StressSens    0.00000000    0.00000000   -0.01643745
-#> SelfAware     0.00000000    0.00000000    0.04990513
-#> Moodiness     0.38632297    0.01130336    0.24301446
-#> Cautious      0.00000000    0.05748129    0.22087095
-#> ThoughtFuture 0.05748129    0.00000000    0.00000000
-#> RespCriticism 0.22087095    0.00000000    0.00000000
+#> EmoReactivity 0.07143541    0.08279610    0.01204568
+#> TendWorry     0.00000000    0.21607993    0.00000000
+#> StressSens    0.00000000    0.00000000   -0.03899045
+#> SelfAware     0.00000000    0.01126785    0.06692828
+#> Moodiness     0.39918941    0.02095296    0.25264236
+#> Cautious      0.00000000    0.06583096    0.22841027
+#> ThoughtFuture 0.06583096    0.00000000    0.00000000
+#> RespCriticism 0.22841027    0.00000000    0.00000000
 
 # Create and view a summary of the network estimation
 sum_result_full_cont <- summary(result_full_cont)
 sum_result_full_cont
-#> The density of the estimated network is 0.464
+#> The density of the estimated network is 0.536
 #> 
 #> Network was estimated using regularization with the glasso penalty. The observed-data log-likelihood was used in the model selection.
 #> The effective sample size used for the information criteria
@@ -702,13 +675,14 @@ result_mis_cont <- regularization_net(data = mantar_dummy_mis_cont,
                                      vary = "lambda",
                                      n_lambda = 100,
                                      lambda_min_ratio = 0.1,
-                                     k = "log(n)",
-                                     extended = TRUE,
+                                     ic_type = "ebic",
                                      extended_gamma = 0.5,
                                      n_calc = "average",
                                      missing_handling = "two-step-em",
                                      pcor_merge_rule = "and",
                                      ordered = FALSE)
+#> Warning in def_pen_mats(mat = mat, penalty = penalty, vary = vary, n_lambda =
+#> n_lambda, : Varying 'lambda' only, n_gamma is set to 1.
 
 # View estimated partial correlations
 result_mis_cont
