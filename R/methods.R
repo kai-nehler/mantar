@@ -32,7 +32,7 @@ print.summary.mantar_neighborhood <- function(x, ...) {
   cat(sprintf("The density of the estimated network is %.3f\n\n", x$density))
 
   # Extract arguments
-  ic_type <- to.upper(x$args$ic_type)
+  ic_type <- toupper(x$args$ic_type)
   pcor_rule <- x$args$pcor_merge_rule
   missing_handling <- x$args$missing_handling
   nimp <- x$args$nimp
