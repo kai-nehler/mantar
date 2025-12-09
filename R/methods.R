@@ -32,13 +32,13 @@ print.summary.mantar_neighborhood <- function(x, ...) {
   cat(sprintf("The density of the estimated network is %.3f\n\n", x$density))
 
   # Extract arguments
-  ic_type <- x$args$ic_type
+  ic_type <- to.upper(x$args$ic_type)
   pcor_rule <- x$args$pcor_merge_rule
   missing_handling <- x$args$missing_handling
   nimp <- x$args$nimp
 
   if (is.null(missing_handling)) {
-    cat(sprintf("Network was estimated using neighborhood selection with a penalty term of %s\n", ic_type))
+    cat(sprintf("Network was estimated using neighborhood selection with the information criterion: %s\n", ic_type))
     cat(sprintf("and the '%s' rule for the inclusion of edges based on a full data set.\n\n", pcor_rule))
   } else {
     cat("Network was estimated using neighborhood selection on data with missing values.\n")
@@ -46,7 +46,7 @@ print.summary.mantar_neighborhood <- function(x, ...) {
     if (!is.null(nimp)) {
       cat(sprintf("Stacked multiple imputation was performed with %d imputations.\n", nimp))
     }
-    cat(sprintf("The penalty term was %s and the '%s' rule was used for edge inclusion.\n\n", ic_type, pcor_rule))
+    cat(sprintf("The information criterion was %s and the '%s' rule was used for edge inclusion.\n\n", ic_type, pcor_rule))
   }
 
   cat("The sample sizes used for the nodewise regressions were as follows:\n")
