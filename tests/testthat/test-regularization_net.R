@@ -2,9 +2,12 @@
 
 test_that("regularization_net() works with full data and glasso defaults", {
 
+  expect_warning(
   res <- regularization_net(
     data = mantar_dummy_full_cont,
     penalty = "glasso"
+  ),
+  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
   # structure and classes
@@ -26,14 +29,20 @@ test_that("regularization_net() works with full data and glasso defaults", {
 
 test_that("regularization_net() sets conditional defaults for extended and n_lambda", {
 
+  expect_warning(
   res_glasso <- regularization_net(
     data   = mantar_dummy_full_cont,
     penalty = "glasso"
+  ),
+  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
+  expect_warning(
   res_atan <- regularization_net(
     data   = mantar_dummy_full_cont,
     penalty = "atan"
+  ),
+  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
   # glasso
@@ -50,12 +59,15 @@ test_that("regularization_net() works with mat + ns input", {
   mat <- stats::cov(mantar_dummy_full_cont)
   ns  <- rep(nrow(mantar_dummy_full_cont) - 5, ncol(mat))
 
+  expect_warning(
   res <- regularization_net(
     mat = mat,
     ns  = ns,
     n_calc = "average",
     penalty = "glasso",
     likelihood = "mat_based"
+  ),
+  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
   expect_true(is.matrix(res$pcor))

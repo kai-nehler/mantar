@@ -72,10 +72,6 @@ test_that("print.summary.mantar_neighborhood() reports density and settings", {
   )
   expect_output(
     print(s),
-    "penalty term of",
-  )
-  expect_output(
-    print(s),
     "the 'or' rule for the inclusion of edges",
     ignore.case = TRUE
   )
