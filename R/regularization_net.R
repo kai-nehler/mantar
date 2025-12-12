@@ -235,10 +235,13 @@
 #' # Estimate regularized network from data set with missings
 #' # Using correlation-matrix-based loglikelihood, glasso penalty,
 #' # and stacked multiple imputation to handle missings
+#' # set nimp to 10 for faster computation to in this example (not recommended
+#' # in practice)
 #' result <- regularization_net(mantar_dummy_mis_mix,
 #'                            likelihood = "mat_based",
 #'                            penalty = "glasso",
 #'                            missing_handling = "stacked-mi",
+#'                            nimp = 10,
 #'                            ordered = c(FALSE,FALSE,TRUE,TRUE,
 #'                                        FALSE,FALSE,TRUE,TRUE))
 #'
