@@ -5,3 +5,5 @@
 ^revdep$
 ^sticker\.png$
 ^\.github$
+^doc$
+^Meta$

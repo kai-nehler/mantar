@@ -18,7 +18,9 @@ Suggests:
     mice,
     lavaan,
     qgraph,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
 LazyData: true
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -29,3 +31,4 @@ RdMacros:
 Config/testthat/edition: 3
 URL: https://github.com/kai-nehler/mantar
 BugReports: https://github.com/kai-nehler/mantar/issues
+VignetteBuilder: knitr
