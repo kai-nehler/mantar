@@ -1,6 +1,6 @@
 Package: mantar
-Title: Missingness Alleviation for Network Analysis
-Version: 0.1.0
+Title: Missingness Alleviation for NeTwork Analysis in R
+Version: 0.2.0
 Authors@R: 
     person("Kai Jannik", "Nehler", , "nehler@psych.uni-frankfurt.de", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3764-761X"))
@@ -8,14 +8,27 @@ Description: Provides functionality for estimating cross-sectional network struc
 License: GPL (>= 3)
 Depends: R (>= 4.1.0)
 Imports: 
-    stats
+    Rdpack,
+    mathjaxr,
+    stats,
+    Matrix,
+    glassoFast
 Suggests:
+    numDeriv,
     mice,
     lavaan,
     qgraph,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
 LazyData: true
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
+RdMacros: 
+    Rdpack,
+    mathjaxr
 Config/testthat/edition: 3
+URL: https://github.com/kai-nehler/mantar
+BugReports: https://github.com/kai-nehler/mantar/issues
+VignetteBuilder: knitr
