@@ -1,5 +1,5 @@
 Package: mantar
-Title: Missingness Alleviation for NeTwork Analysis in R
+Title: Missingness Alleviation for Network Analysis
 Version: 0.2.0
 Authors@R: 
     person("Kai Jannik", "Nehler", , "nehler@psych.uni-frankfurt.de", role = c("aut", "cre"),
