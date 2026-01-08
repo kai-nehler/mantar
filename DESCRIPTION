@@ -4,7 +4,7 @@ Version: 0.2.0
 Authors@R: 
     person("Kai Jannik", "Nehler", , "nehler@psych.uni-frankfurt.de", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3764-761X"))
-Description: Provides functionality for estimating cross-sectional network structures representing partial correlations in R, while accounting for missing values in the data. Networks are estimated via neighborhood selection, i.e., node-wise multiple regression, with model selection guided by information criteria. Missing data can be handled primarily via multiple imputation or a maximum likelihood-based approach; deletion techniques are available but secondary <doi:10.31234/osf.io/qpj35>.
+Description: Provides functionality for estimating cross-sectional network structures representing partial correlations while accounting for missing data. Networks are estimated via neighborhood selection or regularization, with model selection guided by information criteria. Missing data can be handled primarily via multiple imputation or a maximum likelihood-based approach, as demonstrated by Nehler and Schultze (2025a) <doi:10.31234/osf.io/qpj35> and Nehler and Schultze (2025b) <doi:10.1080/00273171.2025.2503833>. Deletion-based approaches are also available but play a secondary role.
 License: GPL (>= 3)
 Depends: R (>= 4.1.0)
 Imports: 
