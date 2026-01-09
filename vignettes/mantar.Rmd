@@ -393,7 +393,7 @@ summary(final_result)
 
 This output mainly provides information about the estimation process,much of which reflects the arguments we specified earlier, but it also includes two particularly informative elements. First, it reports the density of the estimated network (i.e., the proportion of non-zero edges). Second, it provides the effective sample sizes used for each node-wise regression.
 
-Most of the time, the goal is not to present the partial correlation matrix itself, but rather to visualize the resulting network structure. This can be achieved by creating a network plot, which in `mantar` builds on the functionality of the `qgraph` [package](https://CRAN.R-project.org/package=pkgname). The plot can be customized using the various options provided by `qgraph`. A common customization is to color nodes according to predefined clusters and to display full variable names in a legend. The names and grouping structure used here follow the original [analysis code](https://osf.io/6s9p4) of the study reported in @vervaet.2021.
+Most of the time, the goal is not to present the partial correlation matrix itself, but rather to visualize the resulting network structure. This can be achieved by creating a network plot, which in `mantar` builds on the functionality of the `qgraph` [package](https://CRAN.R-project.org/package=qgraph). The plot can be customized using the various options provided by `qgraph`. A common customization is to color nodes according to predefined clusters and to display full variable names in a legend. The names and grouping structure used here follow the original [analysis code](https://osf.io/6s9p4) of the study reported in @vervaet.2021.
 
 
 ```{r example_final_network_plot, message=FALSE, warning=FALSE}
