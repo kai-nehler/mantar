@@ -335,10 +335,18 @@ result_mis_cont
 Finally, we consider a real-world example that is also described as an application in @nehler.2024. This example is based on the data from the cross-sectional study reported in @vervaet.2021. The original data is available in the [OSF Project](https://osf.io/ks85g/) and can be temporarily downloaded and loaded into the `R` environment.
 
 ```{r example_data_prep, message=FALSE, warning=FALSE}
-download.file('https://osf.io/download/6s9p4/', 
-  destfile = paste0(tempdir(), '/vervaet.zip'))
-unzip(paste0(tempdir(), '/vervaet.zip'), exdir = tempdir())
-load(paste(tempdir(), '/Supplementary materials/Dataset.RData', sep = ''))
+url <- "https://osf.io/download/6s9p4/"
+
+zipfile <- file.path(tempdir(), "vervaet.zip")
+exdir <- file.path(tempdir(), "vervaet")
+
+dir.create(exdir, recursive = TRUE, showWarnings = FALSE)
+
+download.file(url, destfile = zipfile, mode = "wb")
+unzip(zipfile, exdir = exdir)
+
+load(file.path(exdir, "Supplementary materials", "Dataset.RData"))
+
 ```
 
 
