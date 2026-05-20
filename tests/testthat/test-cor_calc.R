@@ -4,7 +4,7 @@ test_that("cor_calc() works with treating variables as continuous", {
   res <- cor_calc(data = mantar_dummy_full_cat, ordered = FALSE)
   expect_type(res, "list")
   expect_true(all(res$cor_method[lower.tri(res$cor_method)] == "pearson"))
-  expect_equal(res$means, colMeans(mantar_dummy_full_cat))
+  expect_equal(res$means, colMeans(scale(mantar_dummy_full_cat)))
   expect_null(res$args$missing_handling)
   expect_null(res$args$nimp)
 })

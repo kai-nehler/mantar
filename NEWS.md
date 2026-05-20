@@ -1,3 +1,22 @@
+# mantar 0.2.1
+
+## Bug fixes
+* Fixed issue where off-diagonal elements were counted twice when computing the average sample size.
+
+## New defaults
+* When both `mat` and `data` are provided, `mat` is used and `data` only for some additional calculations (e.g., for compatibility with `bootnet`). Not intended for typical use, but needed for integration with `bootnet`.
+* `cor_calc()` now automatically scales raw data when no variables are treated as ordered. This was already the case when called indirectly, but now also applies when calling it directly. Only affects the returned means.
+
+## New arguments and logic
+* Added `means` argument to `regularization_net()`. Not intended for typical use, but needed for integration with `bootnet`.
+* `ns` no longer accepts vectors.
+
+## New features
+* Functions now return imputed data as a `mids` object when using stacked multiple imputation.
+
+## Refinements
+* Using only a single value for one of the regularization parameters in nonconvex regularization now results in a message rather than a warning.
+
 # mantar 0.2.0
 
 ## Change of argument names and input

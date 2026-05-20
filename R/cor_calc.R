@@ -53,6 +53,10 @@
 #'                means is returned as NULL.}
 #'   \item{cor_method}{A matrix indicating the correlation method used for each
 #'                     variable pair.}
+#'   \item{imputed_data}{Imputed datasets used for estimation. For
+#'                       `missing_handling = "stacked-mi"`, the imputed data
+#'                       are returned as a `mids` object from the \pkg{mice}
+#'                       package; otherwise `NULL`}
 #'   \item{args}{List of settings used in the correlation estimation.}
 #' }
 #' @export
@@ -114,8 +118,14 @@ cor_calc <- function(data, ordered = FALSE,
     )
   }
 
-  # Prepare means vector
+  # If no variable is treated as ordered, scale the raw data
+  if (!any_ord){
+    data <- as.data.frame(scale(data))
+  }
+
+  # Prepare means vector and imputed data output
   means <- NULL
+  imputed_data <- NULL
 
   # Handle missing data
   if (anyNA(data)){
@@ -210,7 +220,7 @@ cor_calc <- function(data, ordered = FALSE,
       nimp <- imp_method <- maxit <- NULL
     }
   } else {
-    if (any(ordered)){
+    if (any_ord){
       mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = names(data)[ordered],
                                                  se = "none", output = "cor")))
       if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
@@ -238,6 +248,7 @@ cor_calc <- function(data, ordered = FALSE,
     mat = mat,
     means = means,
     cor_method = cor_method,
+    imputed_data = imputed_data,
     args = list(
       missing_handling = missing_handling,
       nimp = nimp)

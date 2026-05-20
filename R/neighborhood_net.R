@@ -126,6 +126,8 @@
 #'   \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 #'   \item{betas}{Matrix of regression coefficients from the final regression models.}
 #'   \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+#'   \item{imputed_data}{The imputed data used for estimation, returned as a `mids` object from the \pkg{mice} package when
+#'                       `missing_handling = "stacked-mi"`; otherwise `NULL`.}
 #'   \item{args}{List of settings used in the network estimation.}
 #' }
 #' @export
@@ -162,40 +164,63 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
   # Check: Which input is provided?
   checker(data = data, mat = mat)
 
-  # If data is provided, compute correlation matrix
-  if (!is.null(data)) {
+  # Calculate correlation matrix if data is provided
+  if (!is.null(data) & is.null(mat)) {
 
     cor_out <- cor_calc(data = data, missing_handling = missing_handling,
                         ordered = ordered, nimp = nimp, imp_method = imp_method, ...)
     list2env(cor_out, envir = environment())
     list2env(cor_out$args, envir = environment())
 
-    # if numbers of observations are not provided, calculate them
+    # Determine effective sample size if not provided; check that ns is valid if provided
     if (is.null(ns)){
       if (!(n_calc %in% c("individual", "average", "max", "total"))){
         stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
       }
       ns <- reg_calculate_sample_size(data = data, n_calc = n_calc)
-    } else {
+    } else{
       # validate ns input if provided; if it is of length 1 recycle to all variables
-      checker(ns = ns, data = data)
+      checker(ns = ns, data = data, called_from = "neighborhood")
       if (length(ns) == 1){
         ns <- rep(ns, ncol(data))
       }
     }
-  } else if (!is.null(mat)) {
+  } else if (!is.null(data) & !is.null(mat)) {
+    msg <- "Both 'data' and 'mat' are provided. 'mat' will be used for neighborhood selection"
+    if (is.null(ns)) {
+      msg <- paste0(msg, ", and 'ns' will be computed from 'data'")
+    }
+    message(msg, ".")
+    # If ns is not provided, calculate it based on data
+    if (is.null(ns)) {
+      if (!(n_calc %in% c("individual", "average", "max", "total"))){
+        stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
+      }
+      ns <- reg_calculate_sample_size(data = data, n_calc = n_calc)
+    } else{
+      # validate ns input if provided; if it is of length 1 recycle to all variables
+      checker(ns = ns, data = data, called_fram = "neighborhood")
+      if (length(ns) == 1){
+        ns <- rep(ns, ncol(data))
+      }
+    }
+    # Ensure mat is a correlation matrix
+    mat <- stats::cov2cor(mat)
+    means <- nimp <- missing_handling <- cor_method <- imp_method <- imputed_data <- NULL
+  } else if (is.null(data) & !is.null(mat)) {
+
     if (is.null(ns)) {
       stop("If 'mat' is provided, 'ns' must also be specified.")
     }
     # Check if combined input is valid
-    checker(ns = ns, mat = mat)
+    checker(ns = ns, mat = mat, called_from = "neighborhood")
     # If ns is of length 1, recycle to all variables
     if (length(ns) == 1){
       ns <- rep(ns, ncol(mat))
     }
-    # Ensure that mat is a correlation matrix
+    # Ensure mat is a correlation matrix
     mat <- stats::cov2cor(mat)
-    nimp <- missing_handling <- cor_method <- imp_method <- NULL
+    means <- nimp <- missing_handling <- cor_method <- imp_method <- imputed_data <- NULL
   }
 
   # Call helper function to perform neighborhood selection
@@ -206,6 +231,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     pcor = mod$partials,
     betas = mod$beta_mat,
     ns = ns,
+    imputed_data = imputed_data,
     args = list(ic_type = ic_type, cor_method = cor_method, pcor_merge_rule = pcor_merge_rule,
                 missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
   )
@@ -242,7 +268,7 @@ neighborhood_sel <- function(mat, ns, ic_type, pcor_merge_rule){
 
   # be sure that mat is of class matrix and inputs match is valid
   class(mat) <- "matrix"
-  checker(ns = ns, mat = mat)
+  checker(ns = ns, mat = mat, called_from = "neighborhood")
 
   # number of variables
   p <- ncol(mat)

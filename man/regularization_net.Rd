@@ -9,6 +9,7 @@ regularization_net(
   ns = NULL,
   mat = NULL,
   likelihood = "obs_based",
+  means = NULL,
   n_calc = "average",
   count_diagonal = TRUE,
   ic_type = NULL,
@@ -29,20 +30,24 @@ regularization_net(
 )
 }
 \arguments{
-\item{data}{Optional raw data matrix or data frame containing the variables
-to be included in the network. May include missing values. If \code{data} is not
-provided (\code{NULL}), a covariance or correlation matrix must be supplied in \code{mat}.}
+\item{data}{Optional raw data matrix or data frame containing the variables.
+May include missing values. If \code{data} is provided and \code{mat} is \code{NULL}, a
+correlation matrix is estimated from \code{data} and used for network estimation.
+If both \code{data} and \code{mat} are supplied, \code{mat} is used for network estimation,
+while \code{data} is used to compute \code{ns} (if not provided) and for model selection
+when \code{likelihood = "obs_based"}.}
 
-\item{ns}{Optional numeric sample size specification. Can be a single value
-(one sample size for all variables) or a vector (e.g., variable-wise sample
-sizes). When \code{data} is provided and \code{ns} is \code{NULL}, sample sizes are derived
-automatically from \code{data}. When \code{mat} is supplied instead of raw data,
-\code{ns} must be provided and should reflect the sample size underlying \code{mat}.}
+\item{ns}{Optional numeric sample size specification. Can be either a single
+value or a matrix containing pairwise sample sizes, with variable-specific
+sample sizes on the diagonal. In the matrix case, \code{ns} must be symmetric and
+have dimensions equal to the number of variables. When \code{data} is provided and
+\code{ns} is \code{NULL}, sample sizes are derived automatically from \code{data}. When \code{mat}
+is supplied instead of raw data, \code{ns} must be provided.}
 
 \item{mat}{Optional covariance or correlation matrix for the variables to be
-included in the network. Used only when \code{data} is \code{NULL}. If both \code{data} and
-\code{mat} are supplied, \code{mat} is ignored. When \code{mat} is used, \code{ns} must also be
-provided.}
+included in the network. If \code{mat} is provided without \code{data}, \code{ns} must also
+be specified. If both \code{data} and \code{mat} are supplied, \code{mat} is used for network
+estimation (see \code{data}).}
 
 \item{likelihood}{Character string specifying how the log-likelihood
 is computed. Possible values are:
@@ -51,6 +56,15 @@ is computed. Possible values are:
 \item{\code{"mat_based"}}{Uses log-likelihood based on the sample correlation matrix.}
 }}
 
+\item{means}{Optional vector of variable means of the scaled raw data when no
+variables are treated as ordered. This argument is primarily intended for
+internal integration purposes (e.g., with \pkg{bootnet}) and should usually
+not be specified by users directly. It is only used when
+\code{likelihood = "obs_based"} and both raw data via \code{data} and a user-supplied
+matrix via \code{mat} are provided, as the means are not estimated from the data in
+this setting. Note that in the presence of missing data, the means of the
+scaled raw data are not necessarily zero. Ignored otherwise.}
+
 \item{n_calc}{Character string specifying how the effective sample size is
 determined. When \code{data} are provided, it controls how the observation counts
 across variables are aggregated. When \code{ns} is a vector, it controls how the
@@ -58,17 +72,17 @@ entries of \code{ns} are combined. If both \code{data} and \code{ns} are supplie
 values in \code{ns} take precedence. This argument is ignored when \code{ns} is a
 single numeric value. Possible values are:
 \describe{
-\item{\code{"average"}}{Uses the average sample size across variables or across
-the entries of \code{ns}.}
-\item{\code{"max"}}{Uses the maximum sample size across variables or across
-the entries of \code{ns}.}
-\item{\code{"total"}}{Uses the total number of observations. Applicable only when
-\code{ns} is not provided by the user.}
+\item{\code{"average"}}{Uses the average of the pairwise and variable-specific
+sample sizes across the entries of \code{ns}. Importantly, although \code{ns} is required
+as a matrix, off-diagonal elements are only considered once.}
+\item{\code{"max"}}{Uses the maximum pairwise sample size across variable pairs.}
+\item{\code{"total"}}{Uses the total number of observations. Only applicable when
+\code{ns} is not provided and raw data are supplied via \code{data}.}
 }}
 
 \item{count_diagonal}{Logical; should observations contributing to the
 diagonal elements be included when computing the sample size? Only relevant
-when \code{data} is provided and \code{n_calc = "average"}.}
+when \code{n_calc = "average"} and \code{data} or \code{ns} are provided.}
 
 \item{ic_type}{Character string specifying the type of information criterion
 used for model selection. Possible values are: \code{"aic"}, \code{"bic"}, and \code{"ebic"}.
@@ -137,6 +151,8 @@ selected (optimal) network.}
 directly via \code{n} or derived based on \code{n_calc}.}
 \item{cor_method}{Correlation estimation method used for each
 variable pair.}
+\item{imputed_data}{The imputed data used for estimation, returned as a \code{mids} object from the \pkg{mice} package when
+\code{missing_handling = "stacked-mi"}; otherwise \code{NULL}.}
 \item{full_results}{Full set of results returned by the model selection
 procedure, including all evaluated networks and their fit statistics.}
 \item{args}{A list of settings used in the estimation procedure.}

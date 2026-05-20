@@ -99,6 +99,8 @@ A list with the following elements:
 \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 \item{betas}{Matrix of regression coefficients from the final regression models.}
 \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+\item{imputed_data}{The imputed data used for estimation, returned as a \code{mids} object from the \pkg{mice} package when
+\code{missing_handling = "stacked-mi"}; otherwise \code{NULL}.}
 \item{args}{List of settings used in the network estimation.}
 }
 }

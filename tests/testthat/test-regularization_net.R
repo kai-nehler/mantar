@@ -2,17 +2,15 @@
 
 test_that("regularization_net() works with full data and glasso defaults", {
 
-  expect_warning(
+
   res <- regularization_net(
     data = mantar_dummy_full_cont,
     penalty = "glasso"
-  ),
-  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
   # structure and classes
   expect_type(res, "list")
-  expect_named(res, c("pcor", "n", "cor_method", "full_results", "args"))
+  expect_named(res, c("pcor", "n", "cor_method", "imputed_data", "full_results", "args"))
   expect_s3_class(res, "mantar_regularization")
   expect_s3_class(res, "mantar_network")
 
@@ -29,15 +27,12 @@ test_that("regularization_net() works with full data and glasso defaults", {
 
 test_that("regularization_net() sets conditional defaults for extended and n_lambda", {
 
-  expect_warning(
   res_glasso <- regularization_net(
     data   = mantar_dummy_full_cont,
     penalty = "glasso"
-  ),
-  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
-  expect_warning(
+  expect_message(
   res_atan <- regularization_net(
     data   = mantar_dummy_full_cont,
     penalty = "atan"
@@ -57,17 +52,14 @@ test_that("regularization_net() sets conditional defaults for extended and n_lam
 test_that("regularization_net() works with mat + ns input", {
 
   mat <- stats::cov(mantar_dummy_full_cont)
-  ns  <- rep(nrow(mantar_dummy_full_cont) - 5, ncol(mat))
+  ns  <- matrix(data = nrow(mantar_dummy_full_cont), nrow = ncol(mat), ncol = ncol(mat))
 
-  expect_warning(
   res <- regularization_net(
     mat = mat,
     ns  = ns,
     n_calc = "average",
     penalty = "glasso",
     likelihood = "mat_based"
-  ),
-  regexp = "Varying 'lambda' only, n_gamma is set to 1."
   )
 
   expect_true(is.matrix(res$pcor))
@@ -113,6 +105,30 @@ test_that("regularization_net() errors for obs_based likelihood with ordered var
   )
 })
 
+test_that("regularization_net() errors with glasso and vary not as lambda", {
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_full_cont,
+      likelihood = "obs_based",
+      penalty = "glasso",
+      vary = "gamma"
+    ),
+    "For 'glasso' penalty, 'vary' must be set to 'lambda' as this is the only penalty parameter. If you want to provide your own lambda values you can do this in the corresponding argument 'lambda' but you still have to set 'vary' to 'lambda'.",
+    fixed = FALSE
+  )
+
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_full_cont,
+      likelihood = "obs_based",
+      penalty = "glasso",
+      vary = "both"
+    ),
+    "For 'glasso' penalty, 'vary' must be set to 'lambda' as this is the only penalty parameter. If you want to provide your own lambda values you can do this in the corresponding argument 'lambda' but you still have to set 'vary' to 'lambda'.",
+    fixed = FALSE
+  )
+})
+
 test_that("regularization_net() requires ns when mat is provided", {
   expect_error(
     regularization_net(
@@ -125,6 +141,203 @@ test_that("regularization_net() requires ns when mat is provided", {
   )
 })
 
+test_that("regularization_net() fails false definition of ns", {
+  expect_error(
+    regularization_net(
+      mat = stats::cov(mantar_dummy_full_cont),
+      penalty = "glasso",
+      likelihood = "mat_based",
+      ns = colSums(!is.na(mantar_dummy_full_cont))
+    ),
+    "'ns' must be either a single value or a matrix with dimensions matching 'mat'",
+    fixed = FALSE
+  )
+})
+
+
+test_that("regularization_net() works with ns as matrix", {
+
+  res <- regularization_net(
+      mat = stats::cov(mantar_dummy_full_cont),
+      penalty = "glasso",
+      likelihood = "mat_based",
+      ns = matrix(100, nrow = ncol(mantar_dummy_full_cont), ncol = ncol(mantar_dummy_full_cont))
+    )
+
+  expect_equal(res$n, 100)
+
+})
+
+
+test_that("regularization_net() requires means when mat and data is provided with obs_based likelihood", {
+  expect_error(
+    regularization_net(
+      mat = stats::cor(mantar_dummy_full_cont),
+      data = mantar_dummy_full_cont,
+      penalty = "glasso",
+      likelihood = "obs_based",
+      ns = nrow(mantar_dummy_full_cont)
+    ),
+    "When likelihood = 'obs_based' and a user-supplied matrix is used for regularization, 'means' must be provided, as no estimation from raw data is performed.",
+    fixed = FALSE
+  )
+})
+
+test_that("regularization_net() does not require means when mat and data is provided with mat_based likelihood", {
+  expect_message(
+    regularization_net(
+      mat = stats::cor(mantar_dummy_full_cont),
+      data = mantar_dummy_full_cont,
+      penalty = "glasso",
+      likelihood = "mat_based"
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for regularization and likelihood computation. 'data' is ignored, and 'ns' will be computed from 'data'.",
+    fixed = FALSE
+  )
+
+  expect_message(
+    regularization_net(
+      mat = stats::cor(mantar_dummy_full_cont),
+      data = mantar_dummy_full_cont,
+      penalty = "glasso",
+      likelihood = "mat_based",
+      ns = nrow(mantar_dummy_full_cont)
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for regularization.",
+    fixed = FALSE
+  )
+
+})
+
+test_that("regularization_net() works when means, mat and data is provided with obs_based likelihood", {
+
+  expect_message(
+    regularization_net(
+      mat = stats::cor(mantar_dummy_full_cont),
+      data = mantar_dummy_full_cont,
+      penalty = "glasso",
+      likelihood = "obs_based",
+      means = colMeans(mantar_dummy_full_cont),
+      ns = nrow(mantar_dummy_full_cont)
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for regularization, while 'data' will be used in the calculation of the observed-data loglikelihood.",
+    fixed = FALSE
+  )
+})
+
+
+
+test_that("regularization_net() works identically for obs_based likelihood while using cor_calc or providing values", {
+
+  mantar_dummy_mis_cont_half <- mantar_dummy_mis_cont[1:(nrow(mantar_dummy_mis_cont)/2), ]
+
+  expect_message(
+    res_provided <- regularization_net(
+      mat = stats::cor(mantar_dummy_mis_cont_half, use = "complete"),
+      data = mantar_dummy_mis_cont_half,
+      penalty = "glasso",
+      likelihood = "obs_based",
+      means = colMeans(na.omit(scale(mantar_dummy_mis_cont_half))),
+      ns = mean({m <- t(!is.na(mantar_dummy_mis_cont_half)) %*% !is.na(mantar_dummy_mis_cont_half); m[upper.tri(m, diag = TRUE)]})
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for regularization, while 'data' will be used in the calculation of the observed-data loglikelihood.",
+    fixed = FALSE
+  )
+
+  res_aut <- regularization_net(
+    data = mantar_dummy_mis_cont_half,
+    penalty = "glasso",
+    missing_handling = "listwise")
+
+  expect_equal(res_provided$pcor, res_aut$pcor)
+
+})
+
+test_that("regularization_net() gives identical results for obs_based and mat_based likelihood when using cor_calc", {
+
+  data_obs <- regularization_net(data = mantar_dummy_full_cont,
+                                 likelihood = "obs_based",
+                                 n_calc = "average",
+                                 penalty = "glasso",
+                                 n_gamma = 60)
+
+  mat_data_obs <- regularization_net(data = mantar_dummy_full_cont,
+                                     mat = cor(mantar_dummy_full_cont),
+                                     means = colMeans(mantar_dummy_full_cont),
+                                     likelihood = "obs_based",
+                                     n_calc = "average",
+                                     penalty = "glasso",
+                                     n_gamma = 60)
+
+  mat_mat <- regularization_net(mat = cor(mantar_dummy_full_cont),
+                                ns = nrow(mantar_dummy_full_cont),
+                                likelihood = "mat_based",
+                                n_calc = "average",
+                                penalty = "glasso",
+                                n_gamma = 60)
+
+  expect_equal(data_obs$pcor, mat_data_obs$pcor)
+  expect_equal(data_obs$pcor, mat_mat$pcor)
+
+})
+
+test_that("regularization_net() gives identical results for obs_based and mat_based likelihood when using cor_calc with missing data handling", {
+
+  data_obs <- regularization_net(data = mantar_dummy_mis_cont,
+                                 likelihood = "obs_based",
+                                 n_calc = "average",
+                                 penalty = "glasso",
+                                 n_gamma = 50,
+                                 missing_handling = "two-step-em")
+
+  mis_handling <- cor_calc(data = mantar_dummy_mis_cont)
+
+  mat_data_obs <- regularization_net(data = mantar_dummy_mis_cont,
+                                     mat = mis_handling$mat,
+                                     means = mis_handling$means,
+                                     likelihood = "obs_based",
+                                     n_calc = "average",
+                                     penalty = "glasso",
+                                     n_gamma = 50,
+                                     missing_handling = "two-step-em")
+
+  expect_equal(data_obs$pcor, mat_data_obs$pcor)
+})
+
+
+test_that("regularization_net() mat based differs from observation based but not from matbased with data (data ignored)", {
+
+  mis_handling <- cor_calc(data = mantar_dummy_mis_cont)
+
+  mat_data_obs <- regularization_net(data = mantar_dummy_mis_cont,
+                                     mat = mis_handling$mat,
+                                     means = mis_handling$means,
+                                     likelihood = "obs_based",
+                                     n_calc = "average",
+                                     penalty = "glasso",
+                                     n_gamma = 50,
+                                     missing_handling = "two-step-em")
+
+  mat_mat <- regularization_net(mat = mis_handling$mat,
+                                ns = nrow(mantar_dummy_mis_cont),
+                                likelihood = "mat_based",
+                                n_calc = "average",
+                                penalty = "glasso",
+                                n_gamma = 50,
+                                missing_handling = "two-step-em")
+
+  mat_mat_dataignore <- regularization_net(data = mantar_dummy_mis_cont,
+                                           mat = mis_handling$mat,
+                                           ns = nrow(mantar_dummy_mis_cont),
+                                           likelihood = "mat_based",
+                                           n_calc = "average",
+                                           penalty = "glasso",
+                                           n_gamma = 50,
+                                           missing_handling = "data-ignore")
+
+  expect_failure(expect_equal(data_obs$pcor, mat_mat$pcor))
+  expect_equal(mat_mat$pcor, mat_mat_dataignore$pcor)
+})
 
 #### Tests for regularization_sel() ####
 
@@ -203,7 +416,7 @@ test_that("def_pen_mats() uses user-specified lambda and gamma", {
   expect_message(
     pm <- def_pen_mats(
       mat = mat,
-      penalty = "glasso",
+      penalty = "atan",
       vary = "lambda",
       lambda = c(0.1, 0.2),
       gamma = c(0.5, 1)
@@ -217,6 +430,26 @@ test_that("def_pen_mats() uses user-specified lambda and gamma", {
   expect_equal(pm$grid$gamma, rep(c(0.5, 1), each = 2))
 })
 
+
+test_that("def_pen_mats() sends correct warning with glasso and gamma", {
+  mat <- diag(3)
+
+  expect_warning(
+    pm <- def_pen_mats(
+      mat = mat,
+      penalty = "glasso",
+      vary = "lambda",
+      lambda = c(0.1, 0.2),
+      gamma = c(0.5, 1)
+    ),
+    "Gamma values are not used for the glasso penalty and will be ignored.",
+    fixed = FALSE
+  )
+
+  expect_equal(nrow(pm$grid), 2)
+  expect_equal(pm$grid$lambda, rep(c(0.1, 0.2)))
+  expect_equal(pm$grid$gamma, rep(NA, each = 2))
+})
 
 test_that("def_pen_mats() works for atan penalty", {
   mat <- stats::cov2cor(stats::cov(mantar_dummy_full_cont))

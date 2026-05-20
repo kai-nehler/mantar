@@ -57,6 +57,10 @@ A list containing:
 means is returned as NULL.}
 \item{cor_method}{A matrix indicating the correlation method used for each
 variable pair.}
+\item{imputed_data}{Imputed datasets used for estimation. For
+\code{missing_handling = "stacked-mi"}, the imputed data
+are returned as a \code{mids} object from the \pkg{mice}
+package; otherwise \code{NULL}}
 \item{args}{List of settings used in the correlation estimation.}
 }
 }

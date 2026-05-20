@@ -8,41 +8,53 @@
 #' and then selects the final network by minimizing a user‑specified
 #' information criterion.
 #'
-#' @param data Optional raw data matrix or data frame containing the variables
-#' to be included in the network. May include missing values. If `data` is not
-#' provided (`NULL`), a covariance or correlation matrix must be supplied in `mat`.
-#' @param ns Optional numeric sample size specification. Can be a single value
-#' (one sample size for all variables) or a vector (e.g., variable-wise sample
-#' sizes). When `data` is provided and `ns` is `NULL`, sample sizes are derived
-#' automatically from `data`. When `mat` is supplied instead of raw data,
-#' `ns` must be provided and should reflect the sample size underlying `mat`.
+#' @param data Optional raw data matrix or data frame containing the variables.
+#' May include missing values. If `data` is provided and `mat` is `NULL`, a
+#' correlation matrix is estimated from `data` and used for network estimation.
+#' If both `data` and `mat` are supplied, `mat` is used for network estimation,
+#' while `data` is used to compute `ns` (if not provided) and for model selection
+#' when `likelihood = "obs_based"`.
 #' @param mat Optional covariance or correlation matrix for the variables to be
-#' included in the network. Used only when `data` is `NULL`. If both `data` and
-#' `mat` are supplied, `mat` is ignored. When `mat` is used, `ns` must also be
-#' provided.
+#' included in the network. If `mat` is provided without `data`, `ns` must also
+#' be specified. If both `data` and `mat` are supplied, `mat` is used for network
+#' estimation (see `data`).
+#' @param ns Optional numeric sample size specification. Can be either a single
+#' value or a matrix containing pairwise sample sizes, with variable-specific
+#' sample sizes on the diagonal. In the matrix case, `ns` must be symmetric and
+#' have dimensions equal to the number of variables. When `data` is provided and
+#' `ns` is `NULL`, sample sizes are derived automatically from `data`. When `mat`
+#' is supplied instead of raw data, `ns` must be provided.
 #' @param likelihood Character string specifying how the log-likelihood
 #' is computed. Possible values are:
 #' \describe{
 #'   \item{`"obs_based"`}{Uses the observed-data log-likelihood.}
 #'   \item{`"mat_based"`}{Uses log-likelihood based on the sample correlation matrix.}
 #' }
+#' @param means Optional vector of variable means of the scaled raw data when no
+#' variables are treated as ordered. This argument is primarily intended for
+#' internal integration purposes (e.g., with \pkg{bootnet}) and should usually
+#' not be specified by users directly. It is only used when
+#' `likelihood = "obs_based"` and both raw data via `data` and a user-supplied
+#' matrix via `mat` are provided, as the means are not estimated from the data in
+#' this setting. Note that in the presence of missing data, the means of the
+#' scaled raw data are not necessarily zero. Ignored otherwise.
 #' @param n_calc Character string specifying how the effective sample size is
 #' determined. When `data` are provided, it controls how the observation counts
-#' across variables are aggregated. When `ns` is a vector, it controls how the
+#' across variables are aggregated. When `ns` is a matrix, it controls how the
 #' entries of `ns` are combined. If both `data` and `ns` are supplied, the
 #' values in `ns` take precedence. This argument is ignored when `ns` is a
 #' single numeric value. Possible values are:
 #' \describe{
-#'   \item{`"average"`}{Uses the average sample size across variables or across
-#'   the entries of `ns`.}
-#'   \item{`"max"`}{Uses the maximum sample size across variables or across
-#'   the entries of `ns`.}
-#'   \item{`"total"`}{Uses the total number of observations. Applicable only when
-#'   `ns` is not provided by the user.}
+#'   \item{`"average"`}{Uses the average of the pairwise and variable-specific
+#'   sample sizes across the entries of `ns`. Importantly, although `ns` is required
+#'   as a matrix, off-diagonal elements are only considered once.}
+#'   \item{`"max"`}{Uses the maximum pairwise sample size across variable pairs.}
+#'   \item{`"total"`}{Uses the total number of observations. Only applicable when
+#'   `ns` is not provided and raw data are supplied via `data`.}
 #' }
 #' @param count_diagonal Logical; should observations contributing to the
 #' diagonal elements be included when computing the sample size? Only relevant
-#' when `data` is provided and `n_calc = "average"`.
+#' when `n_calc = "average"` and `data` or `ns` are provided.
 #' @param ic_type Character string specifying the type of information criterion
 #' used for model selection. Possible values are: `"aic"`, `"bic"`, and `"ebic"`.
 #' If no input is provided, defaults to `"ebic"` when `penalty = "glasso"` and
@@ -96,6 +108,8 @@
 #'   directly via `n` or derived based on `n_calc`.}
 #'   \item{cor_method}{Correlation estimation method used for each
 #'   variable pair.}
+#'   \item{imputed_data}{The imputed data used for estimation, returned as a `mids` object from the \pkg{mice} package when
+#'                       `missing_handling = "stacked-mi"`; otherwise `NULL`.}
 #'   \item{full_results}{Full set of results returned by the model selection
 #'   procedure, including all evaluated networks and their fit statistics.}
 #'   \item{args}{A list of settings used in the estimation procedure.}
@@ -255,7 +269,8 @@
 #' @export
 #'
 regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
-                               likelihood = "obs_based", n_calc = "average", count_diagonal = TRUE,
+                               likelihood = "obs_based",  means = NULL,
+                               n_calc = "average", count_diagonal = TRUE,
                                ic_type = NULL,
                                extended_gamma = 0.5,
                                penalty = "atan",
@@ -276,6 +291,9 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
   }
   likelihood <- match.arg(tolower(likelihood),
                           choices = c("obs_based", "mat_based"))
+  vary <- match.arg(tolower(vary),
+                          choices = c("lambda", "gamma", "both"))
+  checker(penalty = penalty, vary = vary)
 
   # Set conditional defaults for the ic_type and n_lambda arguments
   if (is.null(n_lambda)) {
@@ -299,15 +317,15 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
          treated as continuous. ")
     } else if (is.null(data)){
       stop("Calculation of the observed data loglikelihood is only implemented when data is provided.")
+    } else if (!is.null(data) & !is.null(mat) & is.null(means)){
+      stop("When likelihood = 'obs_based' and a user-supplied matrix is used for regularization, 'means' must be provided, as no estimation from raw data is performed.")
     }
     data <- as.data.frame(scale(data))
   }
 
-  # set up means object
-  means <- NULL
 
-  # Calculate correlation matrix if data is provided
-  if (!is.null(data)) {
+  # Calculate correlation matrix if data is provided and mat is not provided
+  if (!is.null(data) & is.null(mat)) {
 
     cor_out <- cor_calc(data = data, missing_handling = missing_handling,
                         ordered = ordered, nimp = nimp, imp_method = imp_method, ...)
@@ -320,22 +338,59 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
         stop("Invalid n_calc value. Choose from 'average', 'max', or 'total'.")
       }
       n <- mat_calculate_sample_size(data = data, n_calc = n_calc, count_diagonal = count_diagonal)
-    } else checker(ns = ns, data = data)
-  } else if (!is.null(mat)) {
-    if (is.null(ns)) {
-      stop("If 'mat' is provided, 'ns' must also be specified.")
+    } else checker(ns = ns, data = data, called_from = "regularization")
+  } else if (!is.null(data) & !is.null(mat)) {
+    msg <- "Both 'data' and 'mat' are provided. 'mat' will be used for regularization"
+    if (likelihood == "obs_based") {
+      msg <- paste0(msg, ", while 'data' will be used in the calculation of the observed-data loglikelihood")
     }
-    # calculate n based on ns and n_calc
-    if (n_calc == "average"){
-      n <- mean(ns)
-    } else if (n_calc == "max"){
-      n <- max(ns)
+    if (likelihood == "mat_based") {
+      msg <- paste0(msg, " and likelihood computation. 'data' is ignored")
+      }
+    if (is.null(ns)) {
+      msg <- paste0(msg, ", and 'ns' will be computed from 'data'")
+      }
+    message(msg, ".")
+    # If ns is not provided, calculate it based on data
+    if (is.null(ns)) {
+      n <- mat_calculate_sample_size(data = data, n_calc = n_calc, count_diagonal = count_diagonal)
     } else {
-      stop("When 'mat' is provided, 'n_calc' must be one of 'average' or 'max'.")
+      checker(ns = ns, data = data, called_from = "regularization")
+      if (n_calc == "average"){
+        if (count_diagonal == FALSE) {
+          n <- mean(ns[upper.tri(ns)])
+        } else {
+          n <- mean(ns[upper.tri(ns, diag = TRUE)])
+        }
+      } else if (n_calc == "max"){
+        n <- max(ns)
+      } else {
+        stop("When 'ns' are provided, 'n_calc' must be one of 'average' or 'max'.")
+      }
     }
     # Ensure mat is a correlation matrix
     mat <- stats::cov2cor(mat)
-    nimp <- missing_handling <- cor_method <- NULL
+    nimp <- missing_handling <- cor_method <- imputed_data <-  NULL
+  } else if (is.null(data) & !is.null(mat)) {
+    if (is.null(ns)) {
+      stop("If 'mat' is provided, 'ns' must also be specified.")
+    }
+    checker(mat = mat, ns = ns, called_from = "regularization")
+    # calculate n based on ns and n_calc
+    if (n_calc == "average"){
+      if (count_diagonal == FALSE) {
+        n <- mean(ns[upper.tri(ns)])
+      } else {
+      n <- mean(ns[upper.tri(ns, diag = TRUE)])
+      }
+    } else if (n_calc == "max"){
+      n <- max(ns)
+    } else {
+      stop("When only 'mat' is provided, 'n_calc' must be one of 'average' or 'max'.")
+    }
+    # Ensure mat is a correlation matrix
+    mat <- stats::cov2cor(mat)
+    nimp <- missing_handling <- cor_method <- imputed_data <-  NULL
   }
 
   # Call helper function to perform regularization and model selection
@@ -362,6 +417,7 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     pcor = mod$opt_net,
     n = n,
     cor_method = cor_method,
+    imputed_data = imputed_data,
     full_results = mod$full_results,
     args = list(likelihood = likelihood, n_calc = n_calc, count_diagonal = count_diagonal,
                 ic_type = ic_type, extended_gamma = extended_gamma,
@@ -521,6 +577,8 @@ def_pen_mats <- function(mat,
                          lambda = NULL,
                          gamma  = NULL) {
 
+  checker(penalty = penalty, vary = vary)
+
   # Be sure to only handle correlation matrices - set up precision and identity matrices
   mat <- stats::cov2cor(mat)
   theta <- solve(mat)
@@ -535,14 +593,14 @@ def_pen_mats <- function(mat,
     message("Using user-specified lambda values.")
   } else if (vary %in% c("lambda", "both")) {
 
-    if (vary == "lambda" & n_gamma > 1) {
+    if (vary == "lambda" & n_gamma > 1 & penalty != "glasso") {
       n_gamma <- 1
-      warning("Varying 'lambda' only, n_gamma is set to 1.")
+      message("Varying 'lambda' only, n_gamma is set to 1.")
     }
 
     # largest lambda value is the largest off-diagonal absolute value in the correlation matrix
     lambda_max <- max(max(mat - I_p), -min(mat - I_p))
-    # minimal lambda value at the specified ration
+    # minimal lambda value at the specified ratio
     lambda_min <- lambda_min_ratio * lambda_max
     # space lambda values on log scale
     lambda_vec <- exp(seq(log(lambda_max), log(lambda_min), length.out = n_lambda)) |> sort()
@@ -553,7 +611,14 @@ def_pen_mats <- function(mat,
   }
 
   # create values for gamma when varying gamma and it is not user-specified
-  if (!is.null(gamma)) {
+  if (penalty == "glasso") {
+
+    if (length(gamma) > 0){
+      warning("Gamma values are not used for the glasso penalty and will be ignored.")
+    }
+    gamma_vec <- NA
+
+  } else if (!is.null(gamma)) {
 
     if (any(gamma <0)){
       stop("Gamma values must be positive.")
@@ -564,7 +629,7 @@ def_pen_mats <- function(mat,
   } else if (vary %in% c("gamma", "both")) {
 
     if (vary == "gamma" & n_lambda > 1) {
-      warning("Varying 'gamma' only, n_gamma is set to 1.")
+      message("Varying 'gamma' only, n_gamma is set to 1.")
     }
     # Defaults for multiple gamma values based on penalty type
     if (penalty == "scad") {
@@ -575,9 +640,6 @@ def_pen_mats <- function(mat,
       gamma_vec <- seq(0.1, 1, n_gamma)
     } else {
       gamma_vec <- seq(0.001, 0.1, length.out =  n_gamma)
-    }
-    if (penalty == "glasso") {
-      warning("The glasso penalty does not use a gamma parameter. The gamma grid will be ignored.")
     }
 
   } else {
