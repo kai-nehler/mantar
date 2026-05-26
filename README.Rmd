@@ -51,7 +51,7 @@ if (!requireNamespace("remotes", quietly = TRUE)) {
 }
 ```
 
-```{r, remoteinstall}
+```{r, remoteinstall, eval = FALSE}
 # install.packages("remotes")
 remotes::install_github("kai-nehler/mantar@develop")
 ```
