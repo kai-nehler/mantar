@@ -105,3 +105,77 @@ test_that("inv_to_net() returns symmetric matrix with zero diagonal", {
 
   expect_true(all(abs(net - t(net)) < 1e-10))
 })
+
+#### Tests for chosen_vars_handling() ####
+
+
+test_that("chosen_vars_handling() returns network variable indices", {
+  dat <- data.frame(a = 1:3, b = 2:4, c = 3:5)
+
+  expect_equal(
+    chosen_vars_handling(
+      vars = c(1, 3),
+      data = dat,
+      type = "network"
+    ),
+    c("a", "c")
+  )
+})
+
+test_that("chosen_vars_handling() fails for invalid network variable indices", {
+  dat <- data.frame(a = 1:3, b = 2:4, c = 3:5)
+
+  expect_error(
+    chosen_vars_handling(
+      vars = c(1, 4),
+      data = dat,
+      type = "network"
+    ),
+    "'network_vars' contains indices outside the valid range 1 to 3.",
+    fixed = TRUE
+  )
+})
+
+
+
+test_that("chosen_vars_handling() returns auxiliary variable indices", {
+  dat <- data.frame(a = 1:3, b = 2:4, c = 3:5)
+
+  expect_equal(
+    chosen_vars_handling(
+      vars = c(2, 3),
+      data = dat,
+      type = "auxiliary"
+    ),
+    c("b", "c")
+  )
+})
+
+test_that("chosen_vars_handling() fails for auxiliary variables with mat input", {
+  mat <- diag(3)
+  colnames(mat) <- rownames(mat) <- c("a", "b", "c")
+
+  expect_error(
+    chosen_vars_handling(
+      vars = "b",
+      mat = mat,
+      type = "auxiliary"
+    ),
+    "'auxiliary_vars' can only be used when raw data are provided via 'data', not when a correlation matrix is supplied via 'mat'.",
+    fixed = TRUE
+  )
+})
+
+test_that("chosen_vars_handling() fails for unknown auxiliary variable names", {
+  dat <- data.frame(a = 1:3, b = 2:4, c = 3:5)
+
+  expect_error(
+    chosen_vars_handling(
+      vars = c("b", "d"),
+      data = dat,
+      type = "auxiliary"
+    ),
+    "Unknown variable name(s) in 'auxiliary_vars': d",
+    fixed = TRUE
+  )
+})

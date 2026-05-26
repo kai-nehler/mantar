@@ -78,11 +78,11 @@ Three data sets without missing values are included:
 - `mantar_dummy_full_mix`: Fully observed data with a mix of continuous and ordered categorical variables
 
 Additionally, three data sets with missing values are provided:
-  - `mantar_dummy_mis_cont`: Data with approximately 30% missing values in each
+  - `mantar_dummy_mis_cont`: Data with missing values in each
 continuous variable
-- `mantar_dummy_mis_cat`: Data with approximately 25% missing values in each
+- `mantar_dummy_mis_cat`: Data with missing values in each
 ordered categorical variable
-- `mantar_dummy_mis_mix`: Data with approximately 25% missing values in each
+- `mantar_dummy_mis_mix`: Data with missing values in each
 variable, with a mix of continuous and ordered categorical variables
 
 These data sets are intended for examples and testing only.
@@ -142,13 +142,16 @@ Based on these specifications, the function applies the appropriate correlation 
 - one `TRUE` and one `FALSE`: **polyserial correlation**  
 - both `TRUE`: **polychoric correlation**  
   
+#### Network Variables
+
+The `network_vars` argument allows users to specify a subset of variables to be included in the network estimation. This can be useful when the data set contains variables that are not relevant for the network analysis or when users want to focus on a specific subset of variables. By default, all variables are included in the network estimation. This can be specified by including the column names or the column indices of the variables to be included (e.g., `network_vars = c("Var1", "Var2", "Var3")` or `network_vars = 1:3`).
   
 #### Estimation with Continuous Complete Data
   
 After discussing the key arguments, we can now illustrate how to estimate a network structure using the `neighborhood_net()` function with a data set without missing values.
 
 ```{r example_network}
-# Estimate network from full data set using BIC, the and rule as well as treating the data as continuous
+# Estimate network from full data set using BIC, the and rule as well as treating the data as continuous, using all variables
 result_full_cont <- neighborhood_net(data = mantar_dummy_full_cont, 
                                      ic_type = "bic", 
                                      pcor_merge_rule = "and",
@@ -165,11 +168,12 @@ We can also estimate a network structure when some variables are ordered categor
 
 ```{r example_network_ord}
 # Estimate network from full data set using BIC, the and rule as well as treating the
-# data as ordered categorical
+# data as ordered categorical, using a subset of the variables
 result_full_cat <- neighborhood_net(data = mantar_dummy_full_cat,
                                     ic_type = "bic",  
                                     pcor_merge_rule = "and",
-                                    ordered = TRUE)
+                                    ordered = TRUE,
+                                    network_vars = 1:6)
 
 # View estimated partial correlations
 result_full_cat
@@ -201,6 +205,12 @@ As described previously, deletion techniques (listwise and pairwise) are also av
 If `"stacked-mi"` is used, the `nimp` argument controls the number of imputations (default: `20`), while `imp_method` specifies the imputation method (default: `"pmm"` for predictive mean matching).  
 
 
+#### Auxiliary Variables
+
+The `auxiliary_vars` argument allows users to specify additional variables that are not included as nodes in the final network, but are used during missing data handling. When `"stacked-mi"` is selected, auxiliary variables are included in the imputation model and can therefore improve the quality of the imputed datasets. Auxiliary variables can also be used with the two-step EM approach. In this case, they are included when estimating the correlation matrix in the first step, but only the submatrix corresponding to the network variables is passed on to the subsequent model selection step. 
+
+Thus, auxiliary variables can inform the handling of missing data without becoming part of the estimated network. These variables can be specified by their column names or indices, for example `auxiliary_vars = c("Aux1", "Aux2")` or `auxiliary_vars = 7:8`.
+
 #### Estimation with Missing Data
 
 We can now illustrate how to estimate a network structure using the `neighborhood_net()` function with a data set that contains missing values. All variables are continuous in this example.
@@ -212,7 +222,10 @@ result_mis_cont <- neighborhood_net(data = mantar_dummy_mis_cont,
                                     missing_handling = "stacked-mi",
                                     nimp = 20,
                                     imp_method = "pmm",
-                                    pcor_merge_rule = "and")
+                                    pcor_merge_rule = "and",
+                                    network_vars = 1:6,
+                                    auxiliary_vars = 7:8
+                                    )
 ```
 ```{r example_network_mis_view}
 # View estimated partial correlations
@@ -260,20 +273,23 @@ Based on these specifications, the function applies the appropriate correlation 
 - both `FALSE`: **Pearson correlation**  
 - one `TRUE` and one `FALSE`: **polyserial correlation**  
 - both `TRUE`: **polychoric correlation**  
+
+#### Network Variables
+
+The `network_vars` argument allows users to specify a subset of variables to be included in the network estimation. This can be useful when the data set contains variables that are not relevant for the network analysis or when users want to focus on a specific subset of variables. By default, all variables are included in the network estimation. This can be specified by including the column names or the column indices of the variables to be included (e.g., `network_vars = c("Var1", "Var2", "Var3")` or `network_vars = 1:3`).
   
 #### Estimation with Continuous Complete Data
   
 After discussing the key arguments, we can now illustrate how to estimate a network structure using the `regularization_net()` function with a data set without missing values.
 
 ```{r example_reg_network}
-# Estimate network from full data set using BIC and the glasso penalty
+# Estimate network from full data set using BIC and the glasso penalty with all variables
 result_full_cont <- regularization_net(data = mantar_dummy_full_cont,
                                        penalty = "glasso",
                                        vary = "lambda",
                                        n_lambda = 100,
                                        lambda_min_ratio = 0.1,
                                        ic_type = "bic", 
-                                       pcor_merge_rule = "and",
                                        ordered = FALSE)
 
 # View estimated partial correlations
@@ -306,6 +322,14 @@ As described previously, deletion techniques (listwise and pairwise) are also av
 
 If `"stacked-mi"` is used, the `nimp` argument controls the number of imputations (default: `20`), while `imp_method` specifies the imputation method (default: `"pmm"` for predictive mean matching).
 
+#### Auxiliary Variables
+
+The `auxiliary_vars` argument allows users to specify additional variables that are not included as nodes in the final network, but are used during missing data handling. When `"stacked-mi"` is selected, auxiliary variables are included in the imputation model and can therefore improve the quality of the imputed datasets.
+
+Auxiliary variables can also be used with the two-step EM approach. In this case, they are included when estimating the correlation matrix in the first step, but only the submatrix corresponding to the network variables is passed on to the subsequent model selection step. Thus, auxiliary variables can inform the handling of missing data without becoming part of the estimated network.
+
+These variables can be specified by their column names or indices, for example `auxiliary_vars = c("Aux1", "Aux2")` or `auxiliary_vars = 7:8`.
+
 #### Estimation with Missing Data
 
 We can now illustrate how to estimate a network structure using the `regularization_net()` function with a data set that contains missing values. All variables are continuous in this example.
@@ -322,8 +346,9 @@ result_mis_cont <- regularization_net(data = mantar_dummy_mis_cont,
                                       extended_gamma = 0.5,
                                       n_calc = "average",
                                       missing_handling = "two-step-em",
-                                      pcor_merge_rule = "and",
-                                      ordered = FALSE)
+                                      ordered = FALSE,
+                                      network_vars = 1:6,
+                                      auxiliary_vars = 7:8)
 
 # View estimated partial correlations
 result_mis_cont

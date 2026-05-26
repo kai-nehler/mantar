@@ -149,8 +149,8 @@ test_that("regularization_net() fails false definition of ns", {
       likelihood = "mat_based",
       ns = colSums(!is.na(mantar_dummy_full_cont))
     ),
-    "'ns' must be either a single value or a matrix with dimensions matching 'mat'",
-    fixed = FALSE
+    "'ns' must be either a single value or a matrix with dimensions matching the matrix used for network estimation in 'mat' (after optional selection via 'network_vars').",
+    fixed = TRUE
   )
 })
 
@@ -259,7 +259,7 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                  likelihood = "obs_based",
                                  n_calc = "average",
                                  penalty = "glasso",
-                                 n_gamma = 60)
+                                 n_lambda = 60)
 
   mat_data_obs <- regularization_net(data = mantar_dummy_full_cont,
                                      mat = cor(mantar_dummy_full_cont),
@@ -267,14 +267,14 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                      likelihood = "obs_based",
                                      n_calc = "average",
                                      penalty = "glasso",
-                                     n_gamma = 60)
+                                     n_lambda = 60)
 
   mat_mat <- regularization_net(mat = cor(mantar_dummy_full_cont),
                                 ns = nrow(mantar_dummy_full_cont),
                                 likelihood = "mat_based",
                                 n_calc = "average",
                                 penalty = "glasso",
-                                n_gamma = 60)
+                                n_lambda = 60)
 
   expect_equal(data_obs$pcor, mat_data_obs$pcor)
   expect_equal(data_obs$pcor, mat_mat$pcor)
@@ -287,7 +287,7 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                  likelihood = "obs_based",
                                  n_calc = "average",
                                  penalty = "glasso",
-                                 n_gamma = 50,
+                                 n_lambda = 50,
                                  missing_handling = "two-step-em")
 
   mis_handling <- cor_calc(data = mantar_dummy_mis_cont)
@@ -298,7 +298,7 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                      likelihood = "obs_based",
                                      n_calc = "average",
                                      penalty = "glasso",
-                                     n_gamma = 50,
+                                     n_lambda = 50,
                                      missing_handling = "two-step-em")
 
   expect_equal(data_obs$pcor, mat_data_obs$pcor)
@@ -307,36 +307,211 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
 
 test_that("regularization_net() mat based differs from observation based but not from matbased with data (data ignored)", {
 
-  mis_handling <- cor_calc(data = mantar_dummy_mis_cont)
+  mis_handling <- cor_calc(data = mantar_dummy_mis_cont[1:180,])
 
-  mat_data_obs <- regularization_net(data = mantar_dummy_mis_cont,
+  mat_data_obs <- regularization_net(data = mantar_dummy_mis_cont[1:180,],
                                      mat = mis_handling$mat,
                                      means = mis_handling$means,
                                      likelihood = "obs_based",
                                      n_calc = "average",
+                                     count_diagonal = FALSE,
                                      penalty = "glasso",
-                                     n_gamma = 50,
+                                     n_lambda = 100,
                                      missing_handling = "two-step-em")
 
   mat_mat <- regularization_net(mat = mis_handling$mat,
-                                ns = nrow(mantar_dummy_mis_cont),
+                                ns = mat_calculate_sample_size(mantar_dummy_mis_cont[1:180,], n_calc = "average", count_diagonal = FALSE),
                                 likelihood = "mat_based",
                                 n_calc = "average",
                                 penalty = "glasso",
-                                n_gamma = 50,
+                                n_lambda = 100,
                                 missing_handling = "two-step-em")
 
-  mat_mat_dataignore <- regularization_net(data = mantar_dummy_mis_cont,
+  mat_mat_dataignore <- regularization_net(data = mantar_dummy_mis_cont[1:180,],
                                            mat = mis_handling$mat,
-                                           ns = nrow(mantar_dummy_mis_cont),
+                                           ns = mat_calculate_sample_size(mantar_dummy_mis_cont[1:180,], n_calc = "average", count_diagonal = FALSE),
                                            likelihood = "mat_based",
                                            n_calc = "average",
                                            penalty = "glasso",
-                                           n_gamma = 50,
-                                           missing_handling = "data-ignore")
+                                           n_lambda = 100)
 
-  expect_failure(expect_equal(data_obs$pcor, mat_mat$pcor))
+  expect_failure(expect_equal(mat_data_obs$pcor, mat_mat$pcor))
   expect_equal(mat_mat$pcor, mat_mat_dataignore$pcor)
+})
+
+
+
+test_that("regularization_net() fails when auxiliary_vars are provided without network_vars", {
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_full_cont,
+      likelihood = "mat_based",
+      penalty = "glasso",
+      auxiliary_vars = 1
+    ),
+    "'auxiliary_vars' can only be used when 'network_vars' is specified.",
+    fixed = TRUE
+  )
+})
+
+
+test_that("regularization_net() fails when network_vars contain duplicates", {
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_full_cont,
+      likelihood = "mat_based",
+      penalty = "glasso",
+      network_vars = c(1, 1)
+    ),
+    "'network_vars' must not contain duplicate variables.",
+    fixed = TRUE
+  )
+})
+
+test_that("regularization_net() fails when auxiliary_vars contain duplicates", {
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_mis_cont,
+      likelihood = "mat_based",
+      penalty = "glasso",
+      network_vars = 1:3,
+      auxiliary_vars = c(4, 4)
+    ),
+    "'auxiliary_vars' must not contain duplicate variables.",
+    fixed = TRUE
+  )
+})
+
+test_that("regularization_net() fails when network_vars and auxiliary_vars overlap", {
+  expect_error(
+    regularization_net(
+      data = mantar_dummy_mis_cont,
+      likelihood = "mat_based",
+      penalty = "glasso",
+      network_vars = 1:4,
+      auxiliary_vars = c(4, 5)
+    ),
+    "'network_vars' and 'auxiliary_vars' must not contain overlapping variables.",
+    fixed = TRUE
+  )
+})
+
+test_that("regularization_net() works with network_vars only", {
+  res <- regularization_net(
+    data = mantar_dummy_full_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = 1:4
+  )
+
+  expect_s3_class(res, "mantar_regularization")
+  expect_equal(dim(res$pcor), c(4L, 4L))
+})
+
+test_that("regularization_net() works with network_vars and auxiliary_vars", {
+  res <- regularization_net(
+    data = mantar_dummy_mis_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = 1:3,
+    auxiliary_vars = 4:5,
+    missing_handling = "two-step-em"
+  )
+
+  expect_s3_class(res, "mantar_regularization")
+  expect_equal(dim(res$pcor), c(3L, 3L))
+})
+
+test_that("regularization_net() gives same result for preselected data and network_vars", {
+  res_network_vars <- regularization_net(
+    data = mantar_dummy_full_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = c(1, 2, 3)
+  )
+
+  res_reduced_data <- regularization_net(
+    data = mantar_dummy_full_cont[, c(1, 2, 3)],
+    likelihood = "mat_based",
+    penalty = "glasso"
+  )
+
+  expect_equal(res_network_vars$pcor, res_reduced_data$pcor)
+})
+
+
+test_that("regularization_net() can differ when auxiliary_vars are included", {
+  res_reduced_data <- regularization_net(
+    data = mantar_dummy_mis_cont[, c(1, 2, 3, 4)],
+    likelihood = "mat_based",
+    penalty = "glasso",
+    missing_handling = "two-step-em"
+  )
+
+  res_auxiliary <- regularization_net(
+    data = mantar_dummy_mis_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = c(1, 2, 3, 4),
+    auxiliary_vars = c(5, 6),
+    missing_handling = "two-step-em"
+  )
+
+  expect_false(isTRUE(all.equal(res_reduced_data$pcor, res_auxiliary$pcor)))
+})
+
+
+test_that("regularization_net() respects the order of network_vars", {
+  res_12 <- regularization_net(
+    data = mantar_dummy_full_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = c(1, 2)
+  )
+
+  res_21 <- regularization_net(
+    data = mantar_dummy_full_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = c(2, 1)
+  )
+
+  expect_equal(
+    res_12$pcor,
+    res_21$pcor[c(2, 1), c(2, 1)]
+  )
+})
+
+
+test_that("regularization_net() returns imputed data with stacked-mi and auxiliary_vars", {
+  res_aux <- regularization_net(
+    data = mantar_dummy_mis_cont,
+    likelihood = "mat_based",
+    penalty = "glasso",
+    network_vars = 1:6,
+    auxiliary_vars = 7:8,
+    missing_handling = "stacked-mi",
+    nimp = 2,
+    imp_method = "pmm"
+  )
+
+  res_no_aux <- regularization_net(
+    data = mantar_dummy_mis_cont[, 1:6],
+    likelihood = "mat_based",
+    penalty = "glasso",
+    missing_handling = "stacked-mi",
+    nimp = 2,
+    imp_method = "pmm"
+  )
+
+  expect_s3_class(res_aux, "mantar_regularization")
+  expect_s3_class(res_aux$imputed_data, "mids")
+
+  expect_equal(res_aux$imputed_data$m, 2)
+  expect_equal(ncol(res_aux$imputed_data$data), 8L)
+  expect_equal(dim(res_aux$pcor), c(6L, 6L))
+
+  expect_false(isTRUE(all.equal(res_aux$pcor, res_no_aux$pcor)))
 })
 
 #### Tests for regularization_sel() ####

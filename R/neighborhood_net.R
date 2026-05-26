@@ -18,6 +18,13 @@
 #' included in the network. Used only when `data` is `NULL`. If both `data` and
 #' `mat` are supplied, `mat` is ignored. When `mat` is used, `ns` must also be
 #' provided.
+#' @param network_vars Optional character or numeric vector specifying the variables
+#' in the data set or matrix that are used for network estimation. Default is `NULL`,
+#' which means that all variables are used.
+#' @param auxiliary_vars Optional character or numeric vector specifying variables
+#' in the data set that are used as auxiliary variables for correlation estimation
+#' and missing-data handling, but are not included in the network estimation.
+#' Default is `NULL`, which means that no auxiliary variables are used.
 #' @param n_calc Character string specifying how per-variable sample sizes for
 #' node-wise regression models are computed when `ns` is not supplied. If `ns`
 #' is provided, its values are used directly and `n_calc` is ignored. Possible
@@ -150,7 +157,9 @@
 #'
 #' # View estimated partial correlations
 #' result_mis$pcor
-neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", ic_type = "bic",
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL,
+                             network_vars = NULL, auxiliary_vars = NULL,
+                             n_calc = "individual", ic_type = "bic",
                              ordered = FALSE, pcor_merge_rule = "and",
                              missing_handling = "two-step-em",
                               nimp = 20, imp_method = "pmm", ...){
@@ -161,16 +170,34 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
 
-  # Check: Which input is provided?
+  # Set variable names if not provided
+  if (!is.null(data) && is.null(colnames(data))) {
+    colnames(data) <- paste0("V", seq_len(ncol(data)))
+  }
+
+  if (!is.null(mat) && is.null(colnames(mat))) {
+    colnames(mat) <- paste0("V", seq_len(ncol(mat)))
+    rownames(mat) <- colnames(mat)
+  }
+  # Check: Which input is provided? If both is provided, check that they are compatible
   checker(data = data, mat = mat)
+  # Transform the indicators for the used variables to character and perform some checks
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")
+  network_vars <- chosen_vars_handling(vars = network_vars, data = data, mat = mat, type = "network")
+  auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, mat = mat, type = "auxiliary")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
+
 
   # Calculate correlation matrix if data is provided
   if (!is.null(data) & is.null(mat)) {
 
-    cor_out <- cor_calc(data = data, missing_handling = missing_handling,
+    cor_out <- cor_calc(data = data, network_vars = network_vars,
+                        auxiliary_vars = auxiliary_vars, missing_handling = missing_handling,
                         ordered = ordered, nimp = nimp, imp_method = imp_method, ...)
     list2env(cor_out, envir = environment())
     list2env(cor_out$args, envir = environment())
+
+    data <- data[, network_vars]
 
     # Determine effective sample size if not provided; check that ns is valid if provided
     if (is.null(ns)){
@@ -191,6 +218,8 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
       msg <- paste0(msg, ", and 'ns' will be computed from 'data'")
     }
     message(msg, ".")
+    mat <- mat[network_vars, network_vars]
+    data <- data[, network_vars]
     # If ns is not provided, calculate it based on data
     if (is.null(ns)) {
       if (!(n_calc %in% c("individual", "average", "max", "total"))){
@@ -208,7 +237,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     mat <- stats::cov2cor(mat)
     means <- nimp <- missing_handling <- cor_method <- imp_method <- imputed_data <- NULL
   } else if (is.null(data) & !is.null(mat)) {
-
+    mat <- mat[network_vars, network_vars]
     if (is.null(ns)) {
       stop("If 'mat' is provided, 'ns' must also be specified.")
     }

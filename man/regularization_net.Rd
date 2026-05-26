@@ -10,6 +10,8 @@ regularization_net(
   mat = NULL,
   likelihood = "obs_based",
   means = NULL,
+  network_vars = NULL,
+  auxiliary_vars = NULL,
   n_calc = "average",
   count_diagonal = TRUE,
   ic_type = NULL,
@@ -65,9 +67,18 @@ matrix via \code{mat} are provided, as the means are not estimated from the data
 this setting. Note that in the presence of missing data, the means of the
 scaled raw data are not necessarily zero. Ignored otherwise.}
 
+\item{network_vars}{Optional character or numeric vector specifying the variables
+in the data set or matrix that are used for network estimation. Default is \code{NULL},
+which means that all variables are used.}
+
+\item{auxiliary_vars}{Optional character or numeric vector specifying variables
+in the data set that are used as auxiliary variables for correlation estimation
+and missing-data handling, but are not included in the network estimation.
+Default is \code{NULL}, which means that no auxiliary variables are used.}
+
 \item{n_calc}{Character string specifying how the effective sample size is
 determined. When \code{data} are provided, it controls how the observation counts
-across variables are aggregated. When \code{ns} is a vector, it controls how the
+across variables are aggregated. When \code{ns} is a matrix, it controls how the
 entries of \code{ns} are combined. If both \code{data} and \code{ns} are supplied, the
 values in \code{ns} take precedence. This argument is ignored when \code{ns} is a
 single numeric value. Possible values are:

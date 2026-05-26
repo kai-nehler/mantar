@@ -38,6 +38,13 @@
 #' matrix via `mat` are provided, as the means are not estimated from the data in
 #' this setting. Note that in the presence of missing data, the means of the
 #' scaled raw data are not necessarily zero. Ignored otherwise.
+#' @param network_vars Optional character or numeric vector specifying the variables
+#' in the data set or matrix that are used for network estimation. Default is `NULL`,
+#' which means that all variables are used.
+#' @param auxiliary_vars Optional character or numeric vector specifying variables
+#' in the data set that are used as auxiliary variables for correlation estimation
+#' and missing-data handling, but are not included in the network estimation.
+#' Default is `NULL`, which means that no auxiliary variables are used.
 #' @param n_calc Character string specifying how the effective sample size is
 #' determined. When `data` are provided, it controls how the observation counts
 #' across variables are aggregated. When `ns` is a matrix, it controls how the
@@ -270,6 +277,7 @@
 #'
 regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
                                likelihood = "obs_based",  means = NULL,
+                               network_vars = NULL, auxiliary_vars = NULL,
                                n_calc = "average", count_diagonal = TRUE,
                                ic_type = NULL,
                                extended_gamma = 0.5,
@@ -306,8 +314,22 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     ic_type <- if (identical(penalty, "glasso")) "ebic" else "bic"
   }
 
-  # Check: Which input is provided?
+  # Set variable names if not provided
+  if (!is.null(data) && is.null(colnames(data))) {
+    colnames(data) <- paste0("V", seq_len(ncol(data)))
+  }
+
+  if (!is.null(mat) && is.null(colnames(mat))) {
+    colnames(mat) <- paste0("V", seq_len(ncol(mat)))
+    rownames(mat) <- colnames(mat)
+  }
+  # Check: Which input is provided? If both is provided, check that they are compatible
   checker(data = data, mat = mat)
+  # Transform the indicators for the used variables to character and perform some checks
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")  # Check that auxiliary vars are not used when network_vars is NULL
+  network_vars <- chosen_vars_handling(vars = network_vars, data = data, mat = mat, type = "network")
+  auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, mat = mat, type = "auxiliary")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
 
   # If observed-data loglikelihood is used, scale data to have mean 0 and sd 1; data must be provided
   # and all variables must be treated as continuous
@@ -327,10 +349,13 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
   # Calculate correlation matrix if data is provided and mat is not provided
   if (!is.null(data) & is.null(mat)) {
 
-    cor_out <- cor_calc(data = data, missing_handling = missing_handling,
+    cor_out <- cor_calc(data = data, network_vars = network_vars,
+                        auxiliary_vars = auxiliary_vars, missing_handling = missing_handling,
                         ordered = ordered, nimp = nimp, imp_method = imp_method, ...)
     list2env(cor_out, envir = environment())
     list2env(cor_out$args, envir = environment())
+
+    data <- data[, network_vars]
 
     # Determine effective sample size if not provided; check that ns is valid if provided
     if (is.null(ns)){
@@ -351,6 +376,8 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
       msg <- paste0(msg, ", and 'ns' will be computed from 'data'")
       }
     message(msg, ".")
+    mat <- mat[network_vars, network_vars]
+    data <- data[, network_vars]
     # If ns is not provided, calculate it based on data
     if (is.null(ns)) {
       n <- mat_calculate_sample_size(data = data, n_calc = n_calc, count_diagonal = count_diagonal)
@@ -372,6 +399,7 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     mat <- stats::cov2cor(mat)
     nimp <- missing_handling <- cor_method <- imputed_data <-  NULL
   } else if (is.null(data) & !is.null(mat)) {
+    mat <- mat[network_vars, network_vars]
     if (is.null(ns)) {
       stop("If 'mat' is provided, 'ns' must also be specified.")
     }

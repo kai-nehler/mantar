@@ -8,6 +8,8 @@ neighborhood_net(
   data = NULL,
   ns = NULL,
   mat = NULL,
+  network_vars = NULL,
+  auxiliary_vars = NULL,
   n_calc = "individual",
   ic_type = "bic",
   ordered = FALSE,
@@ -33,6 +35,15 @@ automatically from \code{data}. When \code{mat} is supplied instead of raw data,
 included in the network. Used only when \code{data} is \code{NULL}. If both \code{data} and
 \code{mat} are supplied, \code{mat} is ignored. When \code{mat} is used, \code{ns} must also be
 provided.}
+
+\item{network_vars}{Optional character or numeric vector specifying the variables
+in the data set or matrix that are used for network estimation. Default is \code{NULL},
+which means that all variables are used.}
+
+\item{auxiliary_vars}{Optional character or numeric vector specifying variables
+in the data set that are used as auxiliary variables for correlation estimation
+and missing-data handling, but are not included in the network estimation.
+Default is \code{NULL}, which means that no auxiliary variables are used.}
 
 \item{n_calc}{Character string specifying how per-variable sample sizes for
 node-wise regression models are computed when \code{ns} is not supplied. If \code{ns}

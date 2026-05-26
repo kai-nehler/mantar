@@ -15,6 +15,8 @@ checker <- function(called_from = NULL, ...) {
   n <- args$n
   penalty <- args$penalty
   vary <- args$vary
+  network_vars <- args$network_vars
+  auxiliary_vars <- args$auxiliary_vars
 
   # This section deals with checking data and mat inputs
   if (all(c("data", "mat") %in% names(args))) {
@@ -68,12 +70,12 @@ checker <- function(called_from = NULL, ...) {
     if ("ns" %in% names(args)){
       if ("mat" %in% names(args)){
         if (length(ns) != ncol(mat) & length(ns) != 1){
-          stop("'ns' must be either a single value or a vector with one entry per column in 'mat'.")
+          stop("'ns' must be either a single value or a vector with one entry per column used for network estimation in 'mat' (after optional selection via 'network_vars').")
         }
       }
       if ("data" %in% names(args)){
         if (length(ns) != ncol(data) & length(ns) != 1){
-          stop("'ns' must be either a single value or a vector with one entry per column in 'data'.")
+          stop("'ns' must be either a single value or a vector with one entry per column used for network estimation in 'data' (after optional selection via 'network_vars').")
         }
       }
     }
@@ -84,12 +86,12 @@ checker <- function(called_from = NULL, ...) {
   if ("ns" %in% names(args)) {
     if ("mat" %in% names(args)) {
       if (!(length(ns) == 1 || (is.matrix(ns) && nrow(ns) == ncol(mat) && ncol(ns) == ncol(mat)))) {
-        stop("'ns' must be either a single value or a matrix with dimensions matching 'mat'.")
+        stop("'ns' must be either a single value or a matrix with dimensions matching the matrix used for network estimation in 'mat' (after optional selection via 'network_vars').")
       }
     }
     if ("data" %in% names(args)) {
       if (!(length(ns) == 1 || (is.matrix(ns) && nrow(ns) == ncol(data) && ncol(ns) == ncol(data)))) {
-        stop("'ns' must be either a single value or a matrix with dimensions matching the number of columns in 'data'.")
+        stop("'ns' must be either a single value or a matrix with dimensions matching the matrix used for network estimation in 'data' (after optional selection via 'network_vars').")
       }
     }
   }
@@ -104,11 +106,49 @@ checker <- function(called_from = NULL, ...) {
     }
   }
 
+  # this section deals with selected network and auxiliary variables
+
+  if (!is.null(called_from)){
+  if (called_from == "before_network_vars_check") {
+    if (all(c("network_vars", "auxiliary_vars") %in% names(args))) {
+      if (is.null(network_vars) & !is.null(auxiliary_vars)) {
+      stop( "'auxiliary_vars' can only be used when 'network_vars' is specified. If 'network_vars' is NULL, all variables are used for network estimation, so no separate auxiliary variables can be defined.")
+    }
+    }
+  }
+  if (called_from == "after_network_vars_check") {
+    # Check duplicate selected variables
+    if (!is.null(network_vars)) {
+      if (anyDuplicated(network_vars)) {
+        stop("'network_vars' must not contain duplicate variables.")
+      }
+    }
+
+    if (!is.null(auxiliary_vars)) {
+      if (anyDuplicated(auxiliary_vars)) {
+        stop("'auxiliary_vars' must not contain duplicate variables.")
+      }
+    }
+
+    # Check overlap between network and auxiliary variables
+    if (!is.null(network_vars) && !is.null(auxiliary_vars)) {
+      if (length(intersect(network_vars, auxiliary_vars)) > 0) {
+        stop(
+          "'network_vars' and 'auxiliary_vars' must not contain overlapping variables."
+        )
+      }
+    }
+  }
+  }
+
+
+
   # Check lambda to be varying if the penalty is glasso
   if (all(c("penalty", "vary") %in% names(args))) {
     if (penalty == "glasso" & vary != "lambda") {
       stop("For 'glasso' penalty, 'vary' must be set to 'lambda' as this is the only penalty parameter. If you want to provide your own lambda values you can do this in the corresponding argument 'lambda' but you still have to set 'vary' to 'lambda'.")
     }
   }
+
 }
 
