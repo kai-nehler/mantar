@@ -161,7 +161,7 @@ the intercept) and \eqn{n} is the sample size.
 \strong{Missing Handling}
 
 To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
-According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
+According to simulations by \insertCite{nehler.2026;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
 In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity - but may still be preferred in such cases due to its much faster runtime.
 
 Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.

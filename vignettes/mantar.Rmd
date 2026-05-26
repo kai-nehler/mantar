@@ -357,7 +357,7 @@ result_mis_cont
 
 ## Complete Example Analysis
 
-Finally, we consider a real-world example that is also described as an application in @nehler.2024. This example is based on the data from the cross-sectional study reported in @vervaet.2021. The original data is available in the [OSF Project](https://osf.io/ks85g/) and can be temporarily downloaded and loaded into the `R` environment.
+Finally, we consider a real-world example that is also described as an application in @nehler.2026. This example is based on the data from the cross-sectional study reported in @vervaet.2021. The original data is available in the [OSF Project](https://osf.io/ks85g/) and can be temporarily downloaded and loaded into the `R` environment.
 
 ```{r example_data_prep, message=FALSE, warning=FALSE}
 url <- "https://osf.io/download/6s9p4/"
@@ -387,7 +387,7 @@ Missingness proportions range from as low as `r round(min(colMeans(is.na(Data)))
 
 The first decision concerns the choice of a suitable network estimation method. Simulation studies indicate that glasso regularization combined with EBIC model selection performs well when the ratio of the number of observations to the number of variables is relatively small [@isvoranu.2021; @nehler.2025]. In our case, with $N$ = `r nrow(Data)` observations and $p$ = `r ncol(Data)` variables, this ratio is relatively large. Under such conditions, both nonconvex penalties and neighborhood selection tend to perform well.
 
-The literature further suggests that neighborhood selection may be advantageous when the amount of missingness differs substantially between variables [@nehler.2024], which is the case in this data set. This motivates our choice to proceed with the `neighborhood_net()` function.
+The literature further suggests that neighborhood selection may be advantageous when the amount of missingness differs substantially between variables [@nehler.2026], which is the case in this data set. This motivates our choice to proceed with the `neighborhood_net()` function.
 
 Next, we examine the measurement level of the variables, as this also influences the choice of an appropriate calculation method and determines which missing-data handling strategies are feasible. An initial overview can be obtained by inspecting the summary of the data set.
 
@@ -398,7 +398,7 @@ summary(Data)
 
 The variables are ordered categorical, but the number of categories is sufficiently large to treat them as continuous, as demonstrated by @johal.2023. Treating the variables as continuous gives us full flexibility in choosing among the available missing-data handling methods.
 
-@nehler.2024 showed that when the amount of available information relative to the number of parameters to be estimated (i.e., edges) is low, the stacked multiple imputation approach tends to perform better, while in other situations it performs similarly to the two-step EM algorithm. In our case, although the number of nodes is relatively high, we also have a large number of observations and only a moderate to small amount of missingness overall. Therefore, both methods are feasible, but we opt for the two-step EM approach due to its substantially lower computational demand.
+@nehler.2026 showed that when the amount of available information relative to the number of parameters to be estimated (i.e., edges) is low, the stacked multiple imputation approach tends to perform better, while in other situations it performs similarly to the two-step EM algorithm. In our case, although the number of nodes is relatively high, we also have a large number of observations and only a moderate to small amount of missingness overall. Therefore, both methods are feasible, but we opt for the two-step EM approach due to its substantially lower computational demand.
 
 Estimation thus proceeds as follows:
 
