@@ -104,7 +104,7 @@ mat_calculate_sample_size <- function(data, n_calc = c("average", "max", "total"
 
     if (count_diagonal) {
       # include diagonal elements in the average calculation
-      n <- mean(nonmisMatrix)
+      n <- mean(nonmisMatrix[upper.tri(nonmisMatrix, diag = TRUE)])
     } else {
       # exclude diagonal elements in the average calculation
       n <- mean(nonmisMatrix[upper.tri(nonmisMatrix)])

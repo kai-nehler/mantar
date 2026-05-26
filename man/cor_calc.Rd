@@ -7,6 +7,8 @@
 cor_calc(
   data,
   ordered = FALSE,
+  network_vars = NULL,
+  auxiliary_vars = NULL,
   missing_handling = "two-step-em",
   nimp = 20,
   imp_method = "pmm",
@@ -22,6 +24,16 @@ correlation matrix is to be computed. May include missing values.}
 should be treated as ordered categorical when computing the correlation
 matrix. If a single logical value is supplied, it is recycled to all
 variables.}
+
+\item{network_vars}{Optional character or numeric vector specifying the variables
+for which the correlation matrix is returned, typically the variables used in
+subsequent network estimation. Default is \code{NULL}, which means that all variables
+are included.}
+
+\item{auxiliary_vars}{Optional character or numeric vector specifying variables
+in the data set that are additionally used for correlation estimation and
+missing-data handling, but are not included in the returned correlation matrix.
+Default is \code{NULL}, which means that no auxiliary variables are used.}
 
 \item{missing_handling}{Character string specifying how the correlation
 matrix is estimated from \code{data} in the presence of missing values. Possible
@@ -57,6 +69,10 @@ A list containing:
 means is returned as NULL.}
 \item{cor_method}{A matrix indicating the correlation method used for each
 variable pair.}
+\item{imputed_data}{Imputed datasets used for estimation. For
+\code{missing_handling = "stacked-mi"}, the imputed data
+are returned as a \code{mids} object from the \pkg{mice}
+package; otherwise \code{NULL}}
 \item{args}{List of settings used in the correlation estimation.}
 }
 }

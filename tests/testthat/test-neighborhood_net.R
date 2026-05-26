@@ -6,7 +6,7 @@ test_that("neighborhood_net() works with complete data and default arguments", {
 
   # Check return type
   expect_type(result, "list")
-  expect_named(result, c("pcor", "betas", "ns", "args"))
+  expect_named(result, c("pcor", "betas", "ns", "imputed_data", "args"))
 
   # Check matrix dimensions
   expect_true(is.matrix(result$pcor))
@@ -59,7 +59,7 @@ test_that("neighborhood_net() works with mat + ns input", {
 
   # strcuture
   expect_type(result, "list")
-  expect_named(result, c("pcor", "betas", "ns", "args"))
+  expect_named(result, c("pcor", "betas", "ns", "imputed_data", "args"))
 
   # classes
   expect_s3_class(result, "mantar_neighborhood")
@@ -96,7 +96,46 @@ test_that("neighborhood_net() recycles scalar ns for data input", {
   expect_equal(result$ns, rep(ns_scalar, p))
 })
 
+test_that("neighborhood_net() works with mat and data provided",{
 
+  mantar_dummy_mis_cont_half <- mantar_dummy_mis_cont[1:(nrow(mantar_dummy_mis_cont)/2), ]
+
+  expect_message(
+  neighborhood_net(
+    data = mantar_dummy_mis_cont_half,
+    mat  = stats::cor(mantar_dummy_mis_cont_half, use = "complete")
+  ),
+  "Both 'data' and 'mat' are provided. 'mat' will be used for neighborhood selection, and 'ns' will be computed from 'data'.")
+})
+
+test_that("neighborhood_net() returns same when providing mat and data as the automatic version",{
+
+  mantar_dummy_mis_cont_half <- mantar_dummy_mis_cont[1:(nrow(mantar_dummy_mis_cont)/2), ]
+
+  expect_message(
+    res_provided <- neighborhood_net(
+      data = mantar_dummy_mis_cont_half,
+      mat  = stats::cor(mantar_dummy_mis_cont_half, use = "complete"),
+      ns = colSums(!is.na(mantar_dummy_mis_cont_half))
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for neighborhood selection.")
+
+  expect_message(
+    res_halfaut <- neighborhood_net(
+      data = mantar_dummy_mis_cont_half,
+      mat  = stats::cor(mantar_dummy_mis_cont_half, use = "complete")
+    ),
+    "Both 'data' and 'mat' are provided. 'mat' will be used for neighborhood selection, and 'ns' will be computed from 'data'.")
+
+
+  res_auto <- neighborhood_net(
+    data = mantar_dummy_mis_cont_half,
+    missing_handling = "listwise"
+  )
+
+  expect_equal(res_provided$pcor, res_auto$pcor)
+  expect_equal(res_provided$pcor, res_halfaut$pcor)
+})
 
 #### Tests for neihborhood_sel() ####
 test_that("neighborhood_sel() returns zero network for identity correlation matrix", {

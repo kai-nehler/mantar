@@ -8,6 +8,8 @@ neighborhood_net(
   data = NULL,
   ns = NULL,
   mat = NULL,
+  network_vars = NULL,
+  auxiliary_vars = NULL,
   n_calc = "individual",
   ic_type = "bic",
   ordered = FALSE,
@@ -33,6 +35,15 @@ automatically from \code{data}. When \code{mat} is supplied instead of raw data,
 included in the network. Used only when \code{data} is \code{NULL}. If both \code{data} and
 \code{mat} are supplied, \code{mat} is ignored. When \code{mat} is used, \code{ns} must also be
 provided.}
+
+\item{network_vars}{Optional character or numeric vector specifying the variables
+in the data set or matrix that are used for network estimation. Default is \code{NULL},
+which means that all variables are used.}
+
+\item{auxiliary_vars}{Optional character or numeric vector specifying variables
+in the data set that are used as auxiliary variables for correlation estimation
+and missing-data handling, but are not included in the network estimation.
+Default is \code{NULL}, which means that no auxiliary variables are used.}
 
 \item{n_calc}{Character string specifying how per-variable sample sizes for
 node-wise regression models are computed when \code{ns} is not supplied. If \code{ns}
@@ -99,6 +110,8 @@ A list with the following elements:
 \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 \item{betas}{Matrix of regression coefficients from the final regression models.}
 \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+\item{imputed_data}{The imputed data used for estimation, returned as a \code{mids} object from the \pkg{mice} package when
+\code{missing_handling = "stacked-mi"}; otherwise \code{NULL}.}
 \item{args}{List of settings used in the network estimation.}
 }
 }
@@ -148,7 +161,7 @@ the intercept) and \eqn{n} is the sample size.
 \strong{Missing Handling}
 
 To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
-According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
+According to simulations by \insertCite{nehler.2026;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
 In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity - but may still be preferred in such cases due to its much faster runtime.
 
 Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.

@@ -12,6 +12,14 @@
 #' should be treated as ordered categorical when computing the correlation
 #' matrix. If a single logical value is supplied, it is recycled to all
 #' variables.
+#' @param network_vars Optional character or numeric vector specifying the variables
+#' for which the correlation matrix is returned, typically the variables used in
+#' subsequent network estimation. Default is `NULL`, which means that all variables
+#' are included.
+#' @param auxiliary_vars Optional character or numeric vector specifying variables
+#' in the data set that are additionally used for correlation estimation and
+#' missing-data handling, but are not included in the returned correlation matrix.
+#' Default is `NULL`, which means that no auxiliary variables are used.
 #' @param missing_handling Character string specifying how the correlation
 #' matrix is estimated from `data` in the presence of missing values. Possible
 #' values are:
@@ -53,6 +61,10 @@
 #'                means is returned as NULL.}
 #'   \item{cor_method}{A matrix indicating the correlation method used for each
 #'                     variable pair.}
+#'   \item{imputed_data}{Imputed datasets used for estimation. For
+#'                       `missing_handling = "stacked-mi"`, the imputed data
+#'                       are returned as a `mids` object from the \pkg{mice}
+#'                       package; otherwise `NULL`}
 #'   \item{args}{List of settings used in the correlation estimation.}
 #' }
 #' @export
@@ -75,12 +87,26 @@
 #' result_mis$mat
 #' result_mis$cor_method
 cor_calc <- function(data, ordered = FALSE,
+                     network_vars = NULL, auxiliary_vars = NULL,
                      missing_handling = "two-step-em",
                      nimp = 20, imp_method = "pmm",
                      maxit = 10, ...) {
 
   # Capture additional arguments
   dots <- list(...)
+
+  # Set variable names if not provided
+  if (!is.null(data) && is.null(colnames(data))) {
+    colnames(data) <- paste0("V", seq_len(ncol(data)))
+  }
+  # Transform the indicators for the used variables to character and perform some checks
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")
+  network_vars <- chosen_vars_handling(vars = network_vars, data = data, type = "network")
+  auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, type = "auxiliary")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
+
+  # reduce data set to variables used for network estimation and auxiliary variables
+  data <- data[, c(network_vars, auxiliary_vars), drop = FALSE]
 
   # Match and validate missing handling method
   missing_handling <- match.arg(tolower(missing_handling),
@@ -114,8 +140,14 @@ cor_calc <- function(data, ordered = FALSE,
     )
   }
 
-  # Prepare means vector
+  # If no variable is treated as ordered, scale the raw data
+  if (!any_ord){
+    data <- as.data.frame(scale(data))
+  }
+
+  # Prepare means vector and imputed data output
   means <- NULL
+  imputed_data <- NULL
 
   # Handle missing data
   if (anyNA(data)){
@@ -210,7 +242,7 @@ cor_calc <- function(data, ordered = FALSE,
       nimp <- imp_method <- maxit <- NULL
     }
   } else {
-    if (any(ordered)){
+    if (any_ord){
       mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = names(data)[ordered],
                                                  se = "none", output = "cor")))
       if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
@@ -233,11 +265,16 @@ cor_calc <- function(data, ordered = FALSE,
     )
   )
 
+  # reduce matrix and means to the network variables
+  mat <- mat[network_vars, network_vars, drop = FALSE]
+  if (!is.null(means)) means <- means[network_vars]
+
 
   return(list(
     mat = mat,
     means = means,
     cor_method = cor_method,
+    imputed_data = imputed_data,
     args = list(
       missing_handling = missing_handling,
       nimp = nimp)
@@ -274,3 +311,61 @@ inv_to_net <- function(theta){
 }
 
 
+#' @title Handle Chosen Variables for Network and Auxiliary Variables
+#'
+#' @param vars Vector of the variables to be used.
+#' @param data Data frame containing the variables.
+#' @param mat Correlation matrix containing the variables.
+#' @param type Character string indicating the type of variables being handled.
+#'
+#' @returns Numeric indices of the selected variables.
+#' @noRd
+chosen_vars_handling <- function(vars, data = NULL, mat = NULL,
+                                 type = c("network", "auxiliary")) {
+
+  type <- match.arg(type)
+  arg_name <- paste0(type, "_vars")
+
+  if (!is.null(mat) && type == "auxiliary" && !is.null(vars)) {
+    stop(
+      "'auxiliary_vars' can only be used when raw data are provided via 'data', not when a correlation matrix is supplied via 'mat'."
+    )
+  }
+
+  x <- if (!is.null(data)) data else mat
+  p <- ncol(x)
+  var_names <- colnames(x)
+
+
+  if (is.null(vars)) {
+    if (type == "network") return(var_names)
+    if (type == "auxiliary") return(NULL)
+  }
+
+  if (is.numeric(vars)) {
+    if (any(vars < 1 | vars > p)) {
+      stop(
+        "'", arg_name, "' contains indices outside the valid range 1 to ",
+        p, "."
+      )
+    }
+    return(var_names[vars])
+  }
+
+  if (is.character(vars)) {
+    unknown <- setdiff(vars, var_names)
+
+    if (length(unknown) > 0) {
+      stop(
+        "Unknown variable name(s) in '", arg_name, "': ",
+        paste(unknown, collapse = ", ")
+      )
+    }
+
+    return(vars)
+  }
+
+  stop(
+    "'", arg_name, "' must be numeric indices, character variable names, or NULL."
+  )
+}

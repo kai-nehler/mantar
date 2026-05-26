@@ -35,6 +35,7 @@ test_that("regression_opt() works with data with stacked MI missingness and BIC"
     dep_ind = 2,
     n_calc = "individual",
     missing_handling = "stacked-mi",
+    nimp = 5
   )
 
   expect_type(result_mis, "list")

@@ -18,6 +18,13 @@
 #' included in the network. Used only when `data` is `NULL`. If both `data` and
 #' `mat` are supplied, `mat` is ignored. When `mat` is used, `ns` must also be
 #' provided.
+#' @param network_vars Optional character or numeric vector specifying the variables
+#' in the data set or matrix that are used for network estimation. Default is `NULL`,
+#' which means that all variables are used.
+#' @param auxiliary_vars Optional character or numeric vector specifying variables
+#' in the data set that are used as auxiliary variables for correlation estimation
+#' and missing-data handling, but are not included in the network estimation.
+#' Default is `NULL`, which means that no auxiliary variables are used.
 #' @param n_calc Character string specifying how per-variable sample sizes for
 #' node-wise regression models are computed when `ns` is not supplied. If `ns`
 #' is provided, its values are used directly and `n_calc` is ignored. Possible
@@ -110,7 +117,7 @@
 #' \strong{Missing Handling}
 #'
 #' To handle missing data, the function offers two approaches: a two-step expectation-maximization (EM) algorithm and stacked multiple imputation.
-#' According to simulations by \insertCite{nehler.2024;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
+#' According to simulations by \insertCite{nehler.2026;textual}{mantar}, stacked multiple imputation performs reliably across a range of sample sizes.
 #' In contrast, the two-step EM algorithm provides accurate results primarily when the sample size is large relative to the amount of missingness and network complexity - but may still be preferred in such cases due to its much faster runtime.
 #'
 #' Currently, the function only supports variables that are directly included in the network analysis; auxiliary variables for missing handling are not yet supported.
@@ -126,6 +133,8 @@
 #'   \item{pcor}{Partial correlation matrix estimated from the node-wise regressions.}
 #'   \item{betas}{Matrix of regression coefficients from the final regression models.}
 #'   \item{ns}{Sample sizes used for each variable in the node-wise regressions.}
+#'   \item{imputed_data}{The imputed data used for estimation, returned as a `mids` object from the \pkg{mice} package when
+#'                       `missing_handling = "stacked-mi"`; otherwise `NULL`.}
 #'   \item{args}{List of settings used in the network estimation.}
 #' }
 #' @export
@@ -148,7 +157,9 @@
 #'
 #' # View estimated partial correlations
 #' result_mis$pcor
-neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "individual", ic_type = "bic",
+neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL,
+                             network_vars = NULL, auxiliary_vars = NULL,
+                             n_calc = "individual", ic_type = "bic",
                              ordered = FALSE, pcor_merge_rule = "and",
                              missing_handling = "two-step-em",
                               nimp = 20, imp_method = "pmm", ...){
@@ -159,43 +170,86 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
   missing_handling <- match.arg(tolower(missing_handling), choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   pcor_merge_rule <- match.arg(tolower(pcor_merge_rule), choices = c("and", "or"))
 
-  # Check: Which input is provided?
+  # Set variable names if not provided
+  if (!is.null(data) && is.null(colnames(data))) {
+    colnames(data) <- paste0("V", seq_len(ncol(data)))
+  }
+
+  if (!is.null(mat) && is.null(colnames(mat))) {
+    colnames(mat) <- paste0("V", seq_len(ncol(mat)))
+    rownames(mat) <- colnames(mat)
+  }
+  # Check: Which input is provided? If both is provided, check that they are compatible
   checker(data = data, mat = mat)
+  # Transform the indicators for the used variables to character and perform some checks
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")
+  network_vars <- chosen_vars_handling(vars = network_vars, data = data, mat = mat, type = "network")
+  auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, mat = mat, type = "auxiliary")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
 
-  # If data is provided, compute correlation matrix
-  if (!is.null(data)) {
 
-    cor_out <- cor_calc(data = data, missing_handling = missing_handling,
+  # Calculate correlation matrix if data is provided
+  if (!is.null(data) & is.null(mat)) {
+
+    cor_out <- cor_calc(data = data, network_vars = network_vars,
+                        auxiliary_vars = auxiliary_vars, missing_handling = missing_handling,
                         ordered = ordered, nimp = nimp, imp_method = imp_method, ...)
     list2env(cor_out, envir = environment())
     list2env(cor_out$args, envir = environment())
 
-    # if numbers of observations are not provided, calculate them
+    data <- data[, network_vars]
+
+    # Determine effective sample size if not provided; check that ns is valid if provided
     if (is.null(ns)){
       if (!(n_calc %in% c("individual", "average", "max", "total"))){
         stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
       }
       ns <- reg_calculate_sample_size(data = data, n_calc = n_calc)
-    } else {
+    } else{
       # validate ns input if provided; if it is of length 1 recycle to all variables
-      checker(ns = ns, data = data)
+      checker(ns = ns, data = data, called_from = "neighborhood")
       if (length(ns) == 1){
         ns <- rep(ns, ncol(data))
       }
     }
-  } else if (!is.null(mat)) {
+  } else if (!is.null(data) & !is.null(mat)) {
+    msg <- "Both 'data' and 'mat' are provided. 'mat' will be used for neighborhood selection"
+    if (is.null(ns)) {
+      msg <- paste0(msg, ", and 'ns' will be computed from 'data'")
+    }
+    message(msg, ".")
+    mat <- mat[network_vars, network_vars]
+    data <- data[, network_vars]
+    # If ns is not provided, calculate it based on data
+    if (is.null(ns)) {
+      if (!(n_calc %in% c("individual", "average", "max", "total"))){
+        stop("Invalid n_calc value. Choose from 'individual', 'average', 'max', or 'total'.")
+      }
+      ns <- reg_calculate_sample_size(data = data, n_calc = n_calc)
+    } else{
+      # validate ns input if provided; if it is of length 1 recycle to all variables
+      checker(ns = ns, data = data, called_fram = "neighborhood")
+      if (length(ns) == 1){
+        ns <- rep(ns, ncol(data))
+      }
+    }
+    # Ensure mat is a correlation matrix
+    mat <- stats::cov2cor(mat)
+    means <- nimp <- missing_handling <- cor_method <- imp_method <- imputed_data <- NULL
+  } else if (is.null(data) & !is.null(mat)) {
+    mat <- mat[network_vars, network_vars]
     if (is.null(ns)) {
       stop("If 'mat' is provided, 'ns' must also be specified.")
     }
     # Check if combined input is valid
-    checker(ns = ns, mat = mat)
+    checker(ns = ns, mat = mat, called_from = "neighborhood")
     # If ns is of length 1, recycle to all variables
     if (length(ns) == 1){
       ns <- rep(ns, ncol(mat))
     }
-    # Ensure that mat is a correlation matrix
+    # Ensure mat is a correlation matrix
     mat <- stats::cov2cor(mat)
-    nimp <- missing_handling <- cor_method <- imp_method <- NULL
+    means <- nimp <- missing_handling <- cor_method <- imp_method <- imputed_data <- NULL
   }
 
   # Call helper function to perform neighborhood selection
@@ -206,6 +260,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL, n_calc = "indiv
     pcor = mod$partials,
     betas = mod$beta_mat,
     ns = ns,
+    imputed_data = imputed_data,
     args = list(ic_type = ic_type, cor_method = cor_method, pcor_merge_rule = pcor_merge_rule,
                 missing_handling = missing_handling, nimp = nimp, imp_method = imp_method)
   )
@@ -242,7 +297,7 @@ neighborhood_sel <- function(mat, ns, ic_type, pcor_merge_rule){
 
   # be sure that mat is of class matrix and inputs match is valid
   class(mat) <- "matrix"
-  checker(ns = ns, mat = mat)
+  checker(ns = ns, mat = mat, called_from = "neighborhood")
 
   # number of variables
   p <- ncol(mat)

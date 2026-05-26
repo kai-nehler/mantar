@@ -65,7 +65,7 @@
 #' This function performs stepwise model selection for multiple regression
 #' using information criteria. It was originally developed as a component of
 #' the neighborhood selection framework for network estimation
-#' \insertCite{nehler.2024}{mantar}, where each node-wise regression model is
+#' \insertCite{nehler.2026}{mantar}, where each node-wise regression model is
 #' selected individually. However, the procedure can also be used as a
 #' standalone tool for exploratory regression model search, particularly in
 #' settings with missing data. Unlike standard stepwise regression functions,
