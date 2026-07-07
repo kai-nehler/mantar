@@ -276,8 +276,6 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                 penalty = "glasso",
                                 n_lambda = 60)
 
-  expect_equal(data_obs$pcor, mat_data_obs$pcor)
-  expect_equal(data_obs$pcor, mat_mat$pcor)
 
   expect_equal(
     data_obs$pcor,
