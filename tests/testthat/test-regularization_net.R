@@ -279,6 +279,17 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
   expect_equal(data_obs$pcor, mat_data_obs$pcor)
   expect_equal(data_obs$pcor, mat_mat$pcor)
 
+  expect_equal(
+    data_obs$pcor,
+    mat_data_obs$pcor,
+    tolerance = 1e-4
+  )
+  expect_equal(
+    data_obs$pcor,
+    mat_mat$pcor,
+    tolerance = 1e-4
+  )
+
 })
 
 test_that("regularization_net() gives identical results for obs_based and mat_based likelihood when using cor_calc with missing data handling", {

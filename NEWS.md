@@ -1,3 +1,10 @@
+# mantar 0.3.1
+
+## Refinements
+* Do not include the README in the installation.
+* Numerical tolerances in unit tests adjusted to avoid platform-specific test failures.
+* Regenerating documentation was with the current roxygen2 version.
+
 # mantar 0.3.0
 
 ## Bug fixes
@@ -11,6 +18,7 @@
 * Added `means` argument to `regularization_net()`. Not intended for typical use, but needed for integration with `bootnet`.
 * `ns` no longer accepts vectors in `regularization_net()`, instead accepts a matrix.
 * Added `network_vars` and `auxiliary_vars` arguments to `cor_calc()`, `neighborhood_net()`, and `regularization_net()`. These arguments accept both variable names and numeric indices referring to the provided data.
+
 ## New features
 * Functions now return imputed data as a `mids` object when using stacked multiple imputation.
 * With the new `network_vars` and `auxiliary_vars` arguments, users can now specify which variables are used for network estimation and which additional variables are included for correlation estimation in the presence of missing data.
