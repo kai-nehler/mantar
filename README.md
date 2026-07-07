@@ -29,7 +29,7 @@ variable types.
 
 ## Installation
 
-The current stable version (0.3.0) is [available on
+The current stable version (0.3.1) is [available on
 CRAN](https://cran.r-project.org/package=mantar) and can be installed
 using the usual approach:
 
