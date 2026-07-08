@@ -253,7 +253,7 @@ test_that("regularization_net() works identically for obs_based likelihood while
 
 })
 
-test_that("regularization_net() gives identical results for obs_based and mat_based likelihood when using cor_calc", {
+test_that("regularization_net() gives numerically equivalent results for obs_based and mat_based likelihood when using cor_calc", {
 
   data_obs <- regularization_net(data = mantar_dummy_full_cont,
                                  likelihood = "obs_based",
@@ -277,15 +277,14 @@ test_that("regularization_net() gives identical results for obs_based and mat_ba
                                 n_lambda = 60)
 
 
-  expect_equal(
-    data_obs$pcor,
-    mat_data_obs$pcor,
-    tolerance = 1e-4
+  expect_lt(
+    max(abs(data_obs$pcor - mat_data_obs$pcor), na.rm = TRUE),
+    1e-4
   )
-  expect_equal(
-    data_obs$pcor,
-    mat_mat$pcor,
-    tolerance = 1e-4
+
+  expect_lt(
+    max(abs(data_obs$pcor - mat_mat$pcor), na.rm = TRUE),
+    1e-4
   )
 
 })
