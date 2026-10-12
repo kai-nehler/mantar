@@ -1,3 +1,8 @@
+# mantar 0.3.2
+
+## Refinements
+* Updated the vignette to gracefully handle unavailable external data, preventing errors during package checks.
+
 # mantar 0.3.1
 
 ## Refinements

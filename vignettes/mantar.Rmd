@@ -359,7 +359,7 @@ result_mis_cont
 
 Finally, we consider a real-world example that is also described as an application in @nehler.2026. This example is based on the data from the cross-sectional study reported in @vervaet.2021. The original data is available in the [OSF Project](https://osf.io/ks85g/) and can be temporarily downloaded and loaded into the `R` environment.
 
-```{r example_data_prep, message=FALSE, warning=FALSE}
+```{r example_data_prep, message=TRUE, warning=FALSE}
 url <- "https://osf.io/download/6s9p4/"
 
 zipfile <- file.path(tempdir(), "vervaet.zip")
@@ -367,15 +367,36 @@ exdir <- file.path(tempdir(), "vervaet")
 
 dir.create(exdir, recursive = TRUE, showWarnings = FALSE)
 
-download.file(url, destfile = zipfile, mode = "wb")
-unzip(zipfile, exdir = exdir)
+data_available <- tryCatch({
 
-load(file.path(exdir, "Supplementary materials", "Dataset.RData"))
+  status <- suppressWarnings(
+    download.file(url, destfile = zipfile, mode = "wb", quiet = TRUE)
+  )
+
+  if (status != 0) stop("Download failed.")
+
+  suppressWarnings(unzip(zipfile, exdir = exdir))
+
+  loaded <- load(file.path(exdir, "Supplementary materials", "Dataset.RData"))
+
+  if (!"Data" %in% loaded) stop("Object 'Data' not found.")
+
+  TRUE
+
+}, error = function(e) {
+  message("Example analysis skipped because the external dataset could not be loaded: ", conditionMessage(e))
+  FALSE
+})
 
 ```
 
+```{r example_setup, include=FALSE}
+knitr::opts_chunk$set(eval = data_available)
+```
 
-In this example, we analyze data from `r nrow(Data)` individuals to examine the cross-sectional network structure of 32 scores related to eating disorders (ED) and associated factors (e.g., depressive symptoms, anxiety), with the goal of identifying transdiagnostic vulnerabilities. We now perform a check for missingness in the data set.
+**Note:** This example requires downloading an external dataset from OSF. If the dataset is unavailable, the analysis code will be displayed but not executed.
+
+In this example, we analyze data from `r if (data_available) nrow(Data) else "N/A"` individuals to examine the cross-sectional network structure of 32 scores related to eating disorders (ED) and associated factors (e.g., depressive symptoms, anxiety), with the goal of identifying transdiagnostic vulnerabilities. We now perform a check for missingness in the data set.
 
 
 ```{r example_data_miss}
@@ -383,9 +404,9 @@ colMeans(is.na(Data))
 ```
 
 
-Missingness proportions range from as low as `r round(min(colMeans(is.na(Data))) * 100)`% to as high as `r round(max(colMeans(is.na(Data))) * 100)`%. Overall, the average missingness rate was `r round(mean(colMeans(is.na(Data))) * 100)`%.
+Missingness proportions range from as low as `r if (data_available) round(min(colMeans(is.na(Data))) * 100) else "N/A"`% to as high as `r if (data_available) round(max(colMeans(is.na(Data))) * 100) else "N/A"`%. Overall, the average missingness rate was `r if (data_available) round(mean(colMeans(is.na(Data))) * 100) else "N/A"`%.
 
-The first decision concerns the choice of a suitable network estimation method. Simulation studies indicate that glasso regularization combined with EBIC model selection performs well when the ratio of the number of observations to the number of variables is relatively small [@isvoranu.2021; @nehler.2025]. In our case, with $N$ = `r nrow(Data)` observations and $p$ = `r ncol(Data)` variables, this ratio is relatively large. Under such conditions, both nonconvex penalties and neighborhood selection tend to perform well.
+The first decision concerns the choice of a suitable network estimation method. Simulation studies indicate that glasso regularization combined with EBIC model selection performs well when the ratio of the number of observations to the number of variables is relatively small [@isvoranu.2021; @nehler.2025]. In our case, with $N$ = `r if (data_available) nrow(Data) else "N/A"` observations and $p$ = `r if (data_available) ncol(Data) else "N/A"` variables, this ratio is relatively large. Under such conditions, both nonconvex penalties and neighborhood selection tend to perform well.
 
 The literature further suggests that neighborhood selection may be advantageous when the amount of missingness differs substantially between variables [@nehler.2026], which is the case in this data set. This motivates our choice to proceed with the `neighborhood_net()` function.
 
