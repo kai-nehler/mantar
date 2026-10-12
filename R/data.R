@@ -38,9 +38,7 @@
 #'
 #' @name mantar_dummy_data
 #' @docType data
-#' @aliases mantar_dummy_full_cont mantar_dummy_mis_cont
-#'   mantar_dummy_full_cat mantar_dummy_mis_cat
-#'   mantar_dummy_full_mix mantar_dummy_mis_mix
+#' @aliases mantar_dummy_full_cont mantar_dummy_mis_cont mantar_dummy_full_cat mantar_dummy_mis_cat mantar_dummy_full_mix mantar_dummy_mis_mix
 #'
 #' @examples
 #' # Load selected data set

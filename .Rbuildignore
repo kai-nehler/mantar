@@ -1,6 +1,7 @@
 ^mantar\.Rproj$
 ^\.Rproj\.user$
 ^README\.Rmd$
+^README\.md$
 ^LICENSE\.md$
 ^revdep$
 ^sticker\.png$

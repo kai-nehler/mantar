@@ -36,7 +36,7 @@ The workflow is designed to support typical use cases in psychological research,
 
 ## Installation
 
-The current stable version (0.3.0) is [available on CRAN](https://cran.r-project.org/package=mantar) and can be installed using the usual approach:
+The current stable version (0.3.1) is [available on CRAN](https://cran.r-project.org/package=mantar) and can be installed using the usual approach:
 
 ```{r, craninstall, eval = FALSE}
 install.packages("mantar")
