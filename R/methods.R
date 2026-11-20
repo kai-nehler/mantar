@@ -11,16 +11,13 @@ summary.mantar_neighborhood <- function(object, ...) {
   stopifnot(inherits(object, "mantar_neighborhood"))
 
   # Compute network density
-  pcor <- object$pcor
-  n_nodes <- ncol(pcor)
-  n_edges <- sum(pcor[upper.tri(pcor)] != 0)
-  density <- n_edges / choose(n_nodes, 2)
+  density <- network_density(object$pcor)
 
   result <- list(
     density = density,
     args = object$args,
     ns = object$ns,
-    varnames = colnames(pcor)
+    varnames = colnames(object$pcor)
   )
 
   class(result) <- "summary.mantar_neighborhood"
@@ -62,16 +59,13 @@ summary.mantar_regularization <- function(object, ...) {
   stopifnot(inherits(object, "mantar_regularization"))
 
   # Compute network density
-  pcor <- object$pcor
-  n_nodes <- ncol(pcor)
-  n_edges <- sum(pcor[upper.tri(pcor)] != 0)
-  density <- n_edges / choose(n_nodes, 2)
+  density <- network_density(object$pcor)
 
   result <- list(
     density = density,
     args = object$args,
     n = object$n,
-    varnames = colnames(pcor)
+    varnames = colnames(object$pcor)
   )
 
   class(result) <- "summary.mantar_regularization"
