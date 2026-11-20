@@ -192,6 +192,9 @@ cor_calc <- function(data, ordered = FALSE,
         )
       }
 
+      # check multiple imputation to have a valid entry
+      checker(nimp = nimp)
+
       # Keep column names safe during imputation
       original_names <- colnames(data)
       colnames(data) <- make.names(original_names)
