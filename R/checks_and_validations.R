@@ -107,22 +107,18 @@ checker <- function(called_from = NULL, ...) {
     }
   }
 
-  # Check number of imputations
-  if ("nimp" %in% names(args)) {
-    if (!is.numeric(args$nimp) || length(args$nimp) != 1L ||
-        !is.finite(args$nimp) || args$nimp < 1 || args$nimp %% 1 != 0) {
-      stop("'nimp' must be a single positive integer.")
+  # Check scalar counts
+  count_args <- c("nimp", "nperson", "nnode", "max_shrink_attempts")
+  for (name in intersect(count_args, names(args))) {
+    x <- args[[name]]
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+        x < 1 || x != floor(x)) {
+      stop("'", name, "' must be a single positive integer.")
     }
   }
 
   if ("conf_level" %in% names(args)) {
-    if (!is.numeric(args$conf_level) ||
-        length(args$conf_level) != 1L ||
-        is.na(args$conf_level) ||
-        args$conf_level <= 0 ||
-        args$conf_level >= 1) {
-      stop("`conf.level` must be a single number between 0 and 1.")
-    }
+    validate_proportion(args$conf_level, "conf_level", inclusive = FALSE)
   }
 
   # This section deals with selected network and auxiliary variables
@@ -164,4 +160,153 @@ checker <- function(called_from = NULL, ...) {
       stop("For 'glasso' penalty, 'vary' must be set to 'lambda' as this is the only penalty parameter. If you want to provide your own lambda values you can do this in the corresponding argument 'lambda' but you still have to set 'vary' to 'lambda'.")
     }
   }
+
+  # mlVAR Simulation dimensions
+  if ("ntime" %in% names(args)) {
+    if (!is.numeric(args$ntime) ||
+        !(length(args$ntime) %in% c(1L, args$nperson)) ||
+        any(!is.finite(args$ntime)) || any(args$ntime < 1) ||
+        any(args$ntime != floor(args$ntime))) {
+      stop("ntime must be a positive integer or one positive integer per person.")
+    }
+  }
+
+
+  # Check that each supplied flag is a single TRUE or FALSE
+  for (name in intersect(c("only_nets", "shrink_temporal_fixed"), names(args))) {
+    x <- args[[name]]
+    if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+      stop(name, " must be TRUE or FALSE.")
+    }
+  }
+
+  # mlVAR_sim check Temporal population network
+  if ("beta_fixed" %in% names(args)) {
+    validate_population_matrix(args$beta_fixed, "beta_fixed", args$nnode)
+
+    if (is.null(args$beta_fixed)) {
+      validate_proportion(args$temporal_sparsity, "temporal_sparsity")
+      validate_proportion(args$temporal_prop_positive, "temporal_prop_positive")
+    }
+  }
+
+  # Temporal random effects are generated even when beta_fixed is supplied.
+  if ("temporal_beta_re_sd_range" %in% names(args)) {
+    validate_sd_range(args$temporal_beta_re_sd_range, "temporal_beta_re_sd_range")
+  }
+  if ("temporal_re_correlation_sparsity" %in% names(args)) {
+    validate_proportion(
+      args$temporal_re_correlation_sparsity, "temporal_re_correlation_sparsity"
+    )
+  }
+
+  # Contemporaneous network
+  if ("theta_fixed" %in% names(args)) {
+    validate_population_matrix(
+      args$theta_fixed, "theta_fixed", args$nnode, positive_definite = TRUE
+    )
+
+    if (args$contemporaneous == "random_ggm" && !is.null(args$theta_fixed)) {
+      stop("theta_fixed cannot be specified with contemporaneous = 'random_ggm': ",
+           "the population innovation covariance is computed from the ",
+           "individual covariance matrices.")
+    }
+
+    if (is.null(args$theta_fixed)) {
+      validate_proportion(args$contemporaneous_sparsity, "contemporaneous_sparsity")
+
+      if (!is.numeric(args$theta_var) ||
+          length(args$theta_var) != args$nnode ||
+          any(!is.finite(args$theta_var)) || any(args$theta_var <= 0)) {
+        stop("theta_var must contain one positive variance per node.")
+      }
+    }
+
+    if (args$contemporaneous == "orthogonal_re") {
+      validate_sd_range(
+        args$contemporaneous_pcor_re_sd_range, "contemporaneous_pcor_re_sd_range"
+      )
+    }
+  }
+
+  # Between-person network
+  if ("between_cov" %in% names(args)) {
+    validate_population_matrix(
+      args$between_cov, "between_cov", args$nnode, positive_definite = TRUE
+    )
+
+    if (is.null(args$between_cov)) {
+      validate_proportion(args$between_sparsity, "between_sparsity")
+      validate_sd_range(args$random_intercept_sd_range, "random_intercept_sd_range")
+    }
+  }
+
+  if ("fixed_mean_sd" %in% names(args)) {
+    if (!is.numeric(args$fixed_mean_sd) || length(args$fixed_mean_sd) != 1L ||
+        !is.finite(args$fixed_mean_sd) || args$fixed_mean_sd < 0) {
+      stop("fixed_mean_sd must be one finite, non-negative number.")
+    }
+  }
+
+  # mlVAR sim Shrinkage factors
+  shrink_args <- c(
+    "shrink_temporal_fixed_factor",
+    "shrink_temporal_re_factor",
+    "shrink_contemporaneous_re_factor"
+  )
+  for (name in intersect(shrink_args, names(args))) {
+    validate_proportion(args[[name]], name, inclusive = FALSE)
+  }
+
+  invisible(NULL)
+}
+
+
+
+
+#' Check that a single numeric value lies in [0, 1] or (0, 1)
+#' @noRd
+validate_proportion <- function(x, name, inclusive = TRUE) {
+  if (length(x) != 1L || !is.numeric(x) || !is.finite(x) ||
+      x < 0 || x > 1) {
+    stop(name, " must be a single number between 0 and 1.")
+  }
+
+  if (!inclusive && (x == 0 || x == 1)) {
+    stop(name, " must be strictly between 0 and 1.")
+  }
+}
+
+#' Check a range of two finite, non-negative SD bounds
+#' @noRd
+validate_sd_range <- function(x, name) {
+  if (length(x) != 2L || !is.numeric(x) || any(!is.finite(x)) ||
+      any(x < 0) || x[1] > x[2]) {
+    stop(name, " must be c(lower, upper), with 0 <= lower <= upper.")
+  }
+}
+
+#' Check the dimensions and entries of an optional population matrix
+#' @noRd
+validate_population_matrix <- function(x, name, size, positive_definite = FALSE) {
+  if (is.null(x)) return(invisible(NULL))
+
+  if (!is.matrix(x) || !is.numeric(x) ||
+      !identical(dim(x), c(as.integer(size), as.integer(size))) ||
+      any(!is.finite(x))) {
+    stop(name, " must be a finite numeric ", size, " x ", size, " matrix.")
+  }
+
+  if (positive_definite) {
+    if (!isTRUE(all.equal(unname(x), unname(t(x)), tolerance = 1e-10))) {
+      stop(name, " must be symmetric.")
+    }
+
+    eig <- eigen(x, symmetric = TRUE, only.values = TRUE)$values
+    if (min(eig) <= max(eig) * 1e-12) {
+      stop(name, " must be positive definite.")
+    }
+  }
+
+  invisible(NULL)
 }
