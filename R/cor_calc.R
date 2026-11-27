@@ -7,18 +7,26 @@
 #' correlation types based on whether variables are treated as ordered.
 #'
 #' @param data Data frame or matrix containing the variables for which the
-#' correlation matrix is to be computed. May include missing values.
-#' @param ordered Logical vector indicating whether each variable in `data`
-#' should be treated as ordered categorical when computing the correlation
-#' matrix. If a single logical value is supplied, it is recycled to all
-#' variables.
+#' correlation matrix is to be computed. May include missing values. Variables
+#' selected in `network_vars` must be numeric or ordered factors; variables
+#' selected in `auxiliary_vars` may also be unordered factors or character
+#' vectors (see Details).
+#' @param ordered Logical vector indicating whether each variable in
+#' `network_vars` should be treated as ordered categorical when computing the
+#' correlation matrix. If a single logical value is supplied, it is recycled to
+#' all network variables. `ordered` only affects the correlation type, not the
+#' imputation; how variables are imputed depends on their class and on
+#' `imp_method` (see Details).
 #' @param network_vars Optional character or numeric vector specifying the variables
 #' for which the correlation matrix is returned, typically the variables used in
-#' subsequent network estimation. Default is `NULL`, which means that all variables
-#' are included.
+#' subsequent network estimation. All selected variables must be numeric or
+#' ordered factors. Default is `NULL`, which means that all variables in the
+#' provided data are included.
 #' @param auxiliary_vars Optional character or numeric vector specifying variables
-#' in the data set that are additionally used for correlation estimation and
-#' missing-data handling, but are not included in the returned correlation matrix.
+#' in the data set that are additionally used for missing-data handling, but are
+#' not included in the returned correlation matrix. Can only be used together
+#' with `network_vars`, when at least one network variable contains missing
+#' values, and with `missing_handling = "two-step-em"` or `"stacked-mi"`.
 #' Default is `NULL`, which means that no auxiliary variables are used.
 #' @param missing_handling Character string specifying how the correlation
 #' matrix is estimated from `data` in the presence of missing values. Possible
@@ -35,36 +43,74 @@
 #' }
 #' @param nimp Number of imputations (default: 20) to be used when
 #' `missing_handling = "stacked-mi"`.
-#' @param imp_method Character string specifying the imputation method to be
-#' used when `missing_handling = "stacked-mi"` (default: `"pmm"` - predictive
-#' mean matching).
+#' @param imp_method Optional character vector specifying the imputation method
+#' for each variable when `missing_handling = "stacked-mi"`. Default is `NULL`,
+#' which uses the defaults of [mice::mice()]: predictive mean matching (`"pmm"`)
+#' for numeric variables (including ordered factors, which are converted to
+#' integer scores), logistic regression (`"logreg"`) for factors with two
+#' levels and multinomial logistic regression (`"polyreg"`) for factors with
+#' more than two levels. If supplied, `imp_method` must contain one entry per
+#' variable in `c(network_vars, auxiliary_vars)`, in this order. Entries for
+#' fully observed variables are ignored. To impute an ordinal variable (numeric
+#' or ordered factor) as ordered categorical instead of with `"pmm"`, set its
+#' entry to `"polr"` (proportional odds model). See
+#' [mice::mice()] for further methods. Note that \pkg{mice} does not check every
+#' method against the variable type; for example, `"pmm"` applied to an
+#' unordered factor treats its categories as ordered.
 #' @param maxit Maximum number of iterations for the imputation algorithm when
 #' `missing_handling = "stacked-mi"` (default: 10).
-#' @param ... Further arguments passed to internal functions.
+#' @param ... Further arguments passed to internal functions. When
+#' `missing_handling = "stacked-mi"`, these are passed on to [mice::mice()]
+#' (e.g., `seed` or `printFlag`).
 #'
 #' @details
-#' Correlations are computed pairwise:
+#' Correlations between the network variables are computed pairwise, depending
+#' on `ordered`:
 #' * Polychoric correlations for two ordered variables,
 #' * Polyserial correlations for one ordered and one continuous variable,
 #' * Pearson correlations for two continuous variables.
 #'
-#' Treating variables as ordered requires the missing handling method to be either
-#' `"stacked-mi"` or `"listwise"`
+#' Ordered factors (network or auxiliary variables) are converted to integer
+#' scores 1, ..., k following the order of their levels, so the levels must be
+#' in the intended order. Unordered categorical variables cannot be used as
+#' network variables.
 #'
-#' Means are computed whenever Pearson correlations are used. If any variable
-#' is treated as ordered, `means` is returned as NULL.
+#' Binary network variables can be treated as ordered, which yields tetrachoric
+#' and biserial correlations. As partial correlation networks assume (latent)
+#' continuous variables, a warning is issued for binary network variables; for
+#' purely binary data, an Ising model is usually more appropriate.
+#'
+#' Setting `ordered = TRUE` for any network variable requires the missing
+#' handling method to be either `"stacked-mi"` or `"listwise"`, unless the
+#' network variables are fully observed. Whether a network variable is treated
+#' as ordered depends only on `ordered`, not on its class: an ordered factor
+#' with `ordered = FALSE` enters the correlation matrix as continuous scores.
+#'
+#' Means are computed whenever all network variables are treated as continuous.
+#' If any network variable is treated as ordered, `means` is returned as `NULL`.
+#'
+#' Auxiliary variables are only used to improve the handling of missing values
+#' in the network variables and do not enter the returned correlation matrix.
+#' They are not standardized. With `missing_handling = "two-step-em"`, they are
+#' included in the joint EM estimation and must therefore be numeric or ordered
+#' factors; both are treated as continuous. With `missing_handling = "stacked-mi"`,
+#' they are used as predictors in the imputation models and may additionally be
+#' unordered categorical variables stored as factors or character vectors (converted to factors).
 #'
 #' @returns A list containing:
 #' \describe{
-#'   \item{mat}{Estimated correlation matrix.}
-#'   \item{means}{Vector of estimated means. If any variable is treated as ordered,
-#'                means is returned as NULL.}
+#'   \item{mat}{Estimated correlation matrix of the network variables.}
+#'   \item{means}{Vector of estimated means of the network variables. If any
+#'                network variable is treated as ordered, `means` is returned
+#'                as `NULL`.}
 #'   \item{cor_method}{A matrix indicating the correlation method used for each
-#'                     variable pair.}
+#'                     pair of network variables.}
 #'   \item{imputed_data}{Imputed datasets used for estimation. For
 #'                       `missing_handling = "stacked-mi"`, the imputed data
 #'                       are returned as a `mids` object from the \pkg{mice}
-#'                       package; otherwise `NULL`}
+#'                       package (including the auxiliary variables); otherwise
+#'                       `NULL`. The imputation methods actually used are
+#'                       stored in `imputed_data$method`.}
 #'   \item{args}{List of settings used in the correlation estimation.}
 #' }
 #' @export
@@ -89,7 +135,7 @@
 cor_calc <- function(data, ordered = FALSE,
                      network_vars = NULL, auxiliary_vars = NULL,
                      missing_handling = "two-step-em",
-                     nimp = 20, imp_method = "pmm",
+                     nimp = 20, imp_method = NULL,
                      maxit = 10, ...) {
 
   # Capture additional arguments
@@ -106,6 +152,7 @@ cor_calc <- function(data, ordered = FALSE,
   checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, data = data, called_from = "after_network_vars_check")
 
   # reduce data set to variables used for network estimation and auxiliary variables
+  # (network variables first, followed by auxiliary variables)
   data <- data[, c(network_vars, auxiliary_vars), drop = FALSE]
 
   # Match and validate missing handling method
@@ -121,29 +168,40 @@ cor_calc <- function(data, ordered = FALSE,
     missing_handling = missing_handling
   )
 
-  # Check ordered input to be logical, without NAs and have correct length
+  # Check ordered input: logical, without NAs and one entry per network variable
   if (any(is.na(ordered))) {
     stop("`ordered` must not contain NA.")
   }
   if (any(!is.logical(ordered))){
     stop("All entries of `ordered` must be logical (TRUE/FALSE).")
   }
+  p_net <- length(network_vars)
+  p_aux <- length(auxiliary_vars)
   if (length(ordered) == 1L) {
-      # Recycle to all variables
-      ordered <- rep(ordered, ncol(data))
-    } else {
-      if (length(ordered) != ncol(data)) {
-        # Incorrect length - abort the estimation
-        stop("If `ordered` has length > 1, its length must equal the number of variables (p = ", ncol(data), ").")
-      }
-    }
-
-  # data contains network variables first, followed by auxiliary variables
-  ordered_network <- ordered[seq_along(network_vars)]
+    # Recycle to all network variables
+    ordered <- rep(ordered, p_net)
+  } else if (p_aux > 0L && length(ordered) == p_net + p_aux) {
+    # Transition rule: earlier versions expected one entry per network and auxiliary variable
+    warning(
+      "`ordered` now only refers to the variables in `network_vars`. ",
+      "The entries for `auxiliary_vars` are ignored, as auxiliary variables ",
+      "do not enter the correlation matrix. Use `imp_method` to choose how ",
+      "they are imputed.",
+      call. = FALSE
+    )
+    ordered <- ordered[seq_len(p_net)]
+  } else if (length(ordered) != p_net) {
+    stop(
+      "If `ordered` has length > 1, its length must equal the number of ",
+      "network variables (p = ", p_net, ").",
+      call. = FALSE
+    )
+  }
+  names(ordered) <- network_vars
   any_ord <- any(ordered)
 
   # Ordinal network correlations require lavaan
-  if (any(ordered_network) && !requireNamespace("lavaan", quietly = TRUE)) {
+  if (any_ord && !requireNamespace("lavaan", quietly = TRUE)) {
     stop(
       "Package 'lavaan' must be installed to compute polychoric ",
       "or polyserial correlations.",
@@ -151,18 +209,42 @@ cor_calc <- function(data, ordered = FALSE,
     )
   }
 
-  # Standardize continuous variables when all network nodes are continuous
+
   data <- as.data.frame(data)
-  if (!any(ordered_network)) {
-    scale_vars <- vapply(data, is.numeric, logical(1)) & !ordered
-    data[scale_vars] <- lapply(data[scale_vars], function(x) {
+  # Convert ordered factors to integer scores 1, ..., k (following the order of the levels)
+  ord_vars <- vapply(data, is.ordered, logical(1))
+  data[ord_vars] <- lapply(data[ord_vars], as.integer)
+  # Store character variables (only possible for auxiliary variables) as factors,
+  # otherwise mice treats them as constant and silently drops them as predictors
+  chr_vars <- vapply(data, is.character, logical(1))
+  data[chr_vars] <- lapply(data[chr_vars], factor)
+
+  # Warn about binary network variables
+  binary_vars <- network_vars[vapply(data[network_vars], function(x) {
+    length(unique(x[!is.na(x)])) == 2L
+  }, logical(1))]
+  if (length(binary_vars) > 0L) {
+    msg <- paste0(
+      "Binary network variable(s): ", paste(binary_vars, collapse = ", "), ". ",
+      "The network estimation assumes (latent) continuous variables. For binary ",
+      "data, consider an Ising model instead."
+    )
+    if (any(!ordered[binary_vars])) {
+      msg <- paste0(
+        msg, " Binary variables with ordered = FALSE enter the correlation ",
+        "matrix with Pearson (phi) correlations; consider ordered = TRUE."
+      )
+    }
+    warning(msg, call. = FALSE)
+  }
+
+  # Standardize the network variables when all of them are continuous;
+  # auxiliary variables are kept on their original scale
+  if (!any_ord) {
+    data[network_vars] <- lapply(data[network_vars], function(x) {
       as.numeric(scale(x))
     })
   }
-
-  # Prepare means vector and imputed data output
-  means <- NULL
-  imputed_data <- NULL
 
   # Prepare means vector and imputed data output
   means <- NULL
@@ -175,8 +257,10 @@ cor_calc <- function(data, ordered = FALSE,
       # EM algorithm cannot treat variables as ordered
       if (any_ord) {
         stop(
-          "Cannot use 'two-step-em' when any variables are ordered Either set ordered = FALSE or choose a
-           different missing data method."
+          "'two-step-em' treats all variables as continuous and cannot handle ",
+          "ordered variables. Either set ordered = FALSE or choose a different ",
+          "missing data method.",
+          call. = FALSE
         )
       }
 
@@ -218,16 +302,43 @@ cor_calc <- function(data, ordered = FALSE,
       original_names <- colnames(data)
       colnames(data) <- make.names(original_names)
 
+      # Imputation methods: mice defaults based on the variable class (pmm for
+      # numeric incl. converted ordered factors, logreg for binary and polyreg
+      # for unordered factors) or the user input
+      if (is.null(imp_method)) {
+        imp_method <- mice::make.method(data)
+      } else if (length(imp_method) != ncol(data)) {
+        stop(
+          "'imp_method' must be NULL or contain one entry per variable in ",
+          "'network_vars' and 'auxiliary_vars' (p = ", ncol(data), ").",
+          call. = FALSE
+        )
+      } else {
+        imp_method <- unname(imp_method)
+      }
+      # Numeric variables imputed with "polr" are temporarily stored as ordered
+      # factors; their observed values are kept to convert them back afterwards
+      polr_vars <- which(imp_method == "polr" & vapply(data, is.numeric, logical(1)))
+      polr_values <- lapply(data[polr_vars], function(x) sort(unique(x[!is.na(x)])))
+      data[polr_vars] <- Map(function(x, v) factor(x, levels = v, ordered = TRUE),
+                             data[polr_vars], polr_values)
+
       # Perform multiple imputation and stack the data
-      imputed_data <- suppressMessages(mice::mice(data, m = nimp, maxit = 10,
-                                                  method = imp_method, ...))
+      mice_args <- list(data = data, m = nimp, maxit = maxit,
+                        method = imp_method, printFlag = FALSE)
+      if (length(dots) > 0L) mice_args[names(dots)] <- dots
+      imputed_data <- suppressMessages(do.call(mice::mice, mice_args))
       stacked_data <- mice::complete(imputed_data, c(1:nimp))
+      #  convert variables imputed with "polr" back to their original numeric values
+      stacked_data[polr_vars] <- Map(function(x, v) v[as.integer(x)],
+                                     stacked_data[polr_vars], polr_values)
       colnames(stacked_data) <- original_names  # restore original column names
+      colnames(data) <- original_names
       stacked_data <- stacked_data[, network_vars, drop = FALSE] # reduce only to the network variables
 
-      if (any(ordered_network)) {
+      if (any_ord) {
         mat <- suppressWarnings(
-          try(lavaan::lavCor(stacked_data, ordered = names(data)[ordered],
+          try(lavaan::lavCor(stacked_data, ordered = network_vars[ordered],
                              se = "none", output = "cor"))
         )
         if (inherits(mat, "try-error"))
@@ -238,10 +349,14 @@ cor_calc <- function(data, ordered = FALSE,
       }
 
     } else if (missing_handling == "pairwise"){
+
+      # auxiliary variables are not allowed here, so data only contains network variables
       if (any_ord) {
         stop(
-          "Cannot use 'pairwise' when any variables are treated as ordered. Either set ordered = FALSE or choose a
-           different missing data method."
+          "'pairwise' computes Pearson correlations and cannot handle ordered ",
+          "variables. Either set ordered = FALSE or choose a different missing ",
+          "data method.",
+          call. = FALSE
         )
       }
       mat <- stats::cov2cor(stats::cov(data, use = "pairwise.complete.obs"))
@@ -250,11 +365,12 @@ cor_calc <- function(data, ordered = FALSE,
 
     } else if (missing_handling == "listwise") {
 
+      # auxiliary variables are not allowed here, so data only contains network variables
       data_complete <- stats::na.omit(data)
 
       if (any_ord) {
         mat <- suppressWarnings(
-          try(lavaan::lavCor(data_complete, ordered = names(data)[ordered],
+          try(lavaan::lavCor(data_complete, ordered = network_vars[ordered],
                              missing = "listwise", se = "none", output = "cor"))
         )
         if (inherits(mat, "try-error"))
@@ -266,8 +382,10 @@ cor_calc <- function(data, ordered = FALSE,
       nimp <- imp_method <- maxit <- NULL
     }
   } else {
+
+    # no missing values: auxiliary variables are not allowed, so data only contains network variables
     if (any_ord){
-      mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = names(data)[ordered],
+      mat <- suppressWarnings(try(lavaan::lavCor(data, ordered = network_vars[ordered],
                                                  se = "none", output = "cor")))
       if (inherits(mat, "try-error")) stop("lavaan::lavCor failed. Check your data.")
     } else {
@@ -278,7 +396,7 @@ cor_calc <- function(data, ordered = FALSE,
     nimp <- imp_method <- maxit <- NULL
   }
 
-  cor_method <- matrix("", ncol(data), ncol(data), dimnames = list(names(data), names(data)))
+  cor_method <- matrix("", p_net, p_net, dimnames = list(network_vars, network_vars))
   diag(cor_method) <- "-"
 
   cor_method[lower.tri(cor_method)] <- ifelse(

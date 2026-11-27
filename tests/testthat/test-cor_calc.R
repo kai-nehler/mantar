@@ -26,7 +26,7 @@ test_that("cor_calc() recycles ordered if length 1", {
 test_that("errors in cor_calc work", {
   expect_error(
     cor_calc(data = mantar_dummy_full_cat, ordered = c(FALSE, TRUE)),
-    "If `ordered` has length > 1, its length must equal the number of variables (p = 8).",
+    "If `ordered` has length > 1, its length must equal the number of network variables (p = 8).",
     fixed = TRUE
   )
 
@@ -61,7 +61,7 @@ test_that("cor_calc() errors for two-step-em with ordered variables", {
       ordered = TRUE,
       missing_handling = "two-step-em"
     ),
-    "Cannot use 'two-step-em' when any variables are ordered",
+    "'two-step-em' treats all variables as continuous and cannot handle ordered variables",
     fixed = FALSE
   )
 })

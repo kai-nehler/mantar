@@ -503,7 +503,7 @@ test_that("regularization_net() returns imputed data with stacked-mi and auxilia
     auxiliary_vars = 7:8,
     missing_handling = "stacked-mi",
     nimp = 2,
-    imp_method = "pmm"
+    imp_method = NULL
   )
 
   res_no_aux <- regularization_net(

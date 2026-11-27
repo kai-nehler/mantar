@@ -148,13 +148,11 @@ checker <- function(called_from = NULL, ...) {
 
       if (!is.null(args$data) && !is.null(args$network_vars)) {
         if (!all(vapply(as.data.frame(args$data)[args$network_vars],
-                        is.numeric, logical(1)))) {
+                        function(x) is.numeric(x) || is.ordered(x), logical(1)))) {
           stop(
-            "All variables selected in 'network_vars' must be numeric. ",
-            "For ordered categorical variables stored as factors, supply numeric ",
-            "scores that reflect the intended category order. This requirement ",
-            "helps prevent unordered categories from being treated as ordered ",
-            "based on their internal factor codes.",
+            "All variables selected in 'network_vars' must be numeric or ordered ",
+            "factors. Unordered categorical variables cannot be used as network ",
+            "variables, because their internal factor codes have no meaningful order.",
             call. = FALSE
           )
         }
@@ -182,13 +180,13 @@ checker <- function(called_from = NULL, ...) {
 
     if (args$missing_handling == "two-step-em" &&
         !all(vapply(as.data.frame(args$data)[args$auxiliary_vars],
-                    is.numeric, logical(1)))) {
+                    function(x) is.numeric(x) || is.ordered(x), logical(1)))) {
       stop(
-        "All variables selected in 'auxiliary_vars' must be numeric when ",
-        "'missing_handling' is 'two-step-em', because they are included ",
-        "in the joint EM estimation.",
-        call. = FALSE
-      )
+        "All variables selected in 'auxiliary_vars' must be numeric or ordered ",
+        "factors when 'missing_handling' is 'two-step-em', because they are ",
+        "included in the joint EM estimation as continuous variables. Use ",
+        "'stacked-mi' for unordered categorical auxiliary variables.",
+        call. = FALSE)
     }
   }
 
