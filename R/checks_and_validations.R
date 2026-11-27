@@ -19,12 +19,6 @@ checker <- function(called_from = NULL, ...) {
       if (!is.data.frame(args$data) & !is.matrix(args$data)) {
         stop("'data' must be a data frame or matrix.")
       }
-      if (!all(sapply(args$data, is.numeric))) {
-        stop("All variables in 'data' must be numeric.
-           If you have an ordered categorical variable stored as a factor,
-           please convert it to numeric first. This requirement helps prevent
-           accidentally including unordered categorical variables in the calculation.")
-      }
     }
 
     if (!is.null(args$mat)) {
@@ -151,6 +145,50 @@ checker <- function(called_from = NULL, ...) {
           stop("'network_vars' and 'auxiliary_vars' must not contain overlapping variables.")
         }
       }
+
+      if (!is.null(args$data) && !is.null(args$network_vars)) {
+        if (!all(vapply(as.data.frame(args$data)[args$network_vars],
+                        is.numeric, logical(1)))) {
+          stop(
+            "All variables selected in 'network_vars' must be numeric. ",
+            "For ordered categorical variables stored as factors, supply numeric ",
+            "scores that reflect the intended category order. This requirement ",
+            "helps prevent unordered categories from being treated as ordered ",
+            "based on their internal factor codes.",
+            call. = FALSE
+          )
+        }
+      }
+    }
+  }
+
+
+  if (all(c("data", "network_vars", "auxiliary_vars", "missing_handling") %in% names(args)) &&
+      length(args$auxiliary_vars) > 0L) {
+    if (args$missing_handling %in% c("pairwise", "listwise")) {
+      stop(
+        "'auxiliary_vars' can only be used with 'two-step-em' or 'stacked-mi'.",
+        call. = FALSE
+      )
+    }
+
+    if (!anyNA(args$data[, args$network_vars, drop = FALSE])) {
+      stop(
+        "'auxiliary_vars' were supplied, but all selected network variables ",
+        "are fully observed. Remove 'auxiliary_vars' to continue.",
+        call. = FALSE
+      )
+    }
+
+    if (args$missing_handling == "two-step-em" &&
+        !all(vapply(as.data.frame(args$data)[args$auxiliary_vars],
+                    is.numeric, logical(1)))) {
+      stop(
+        "All variables selected in 'auxiliary_vars' must be numeric when ",
+        "'missing_handling' is 'two-step-em', because they are included ",
+        "in the joint EM estimation.",
+        call. = FALSE
+      )
     }
   }
 

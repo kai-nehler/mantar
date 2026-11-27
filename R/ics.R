@@ -36,6 +36,7 @@ reg_calculate_sample_size <- function(data, n_calc = c("individual", "average", 
             ns <- rep(nrow(data), ncol(data))
             }
   }
+
   return(ns)
 }
 
@@ -176,15 +177,12 @@ mat_ic_calc <- function(data = NULL, sample_cor = NULL, theta, mu = NULL, n,
     # Compute covariance matrix
     sigma <- solve(theta)
 
-
-    if (likelihood == "obs_based"){
-      # theta is an inverse correlation matrix (so the entries of sigma on the diagonal are 1)
-      # need to transform the data in a way, where the SAMPLE covariance is 1
-      cova <- sigma * (nrow(data)-1)/nrow(data)
-      vars <- t(rbind(replicate(nrow(data), sqrt(diag(cova)), simplify = TRUE)))
-      data <- data / vars
-    }
-
+    # theta is an inverse correlation matrix (so the entries of sigma on the diagonal are 1)
+    # need to transform the data in a way, where the SAMPLE covariance is 1
+    cova <- sigma * (nrow(data)-1)/nrow(data)
+    vars <- t(rbind(replicate(nrow(data), sqrt(diag(cova)), simplify = TRUE)))
+    data <- data / vars
+    mu <- mu / sqrt(diag(cova))
 
     # starting likelihood calculation
     # count number of missing patterns
@@ -233,8 +231,7 @@ mat_ic_calc <- function(data = NULL, sample_cor = NULL, theta, mu = NULL, n,
 #' @returns A single numeric value giving the log-likelihood contribution of
 #' all observations belongig to the specific missing data pattern
 #' @noRd
-pattern_ll <- function (data, rows, cols, sigma, theta, mu)
-{
+pattern_ll <- function (data, rows, cols, sigma, theta, mu){
 
   # reduce X to observations belonging to this pattern
   observations <- data[rows, cols, drop = F]
@@ -268,7 +265,8 @@ pattern_ll <- function (data, rows, cols, sigma, theta, mu)
 
   # loglikelihood contributions for all persons of this pattern
   loglik <-  sum(-(pre_log + logdet + mahalanobis_dist)/2)
-  loglik
+
+  return(loglik)
 }
 
 
@@ -342,5 +340,4 @@ mat_inverse_update <- function(theta, rm_idx, logdet, mat_logdet){
           }
 
   return(out)
-
 }

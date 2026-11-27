@@ -329,12 +329,12 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
   checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")  # Check that auxiliary vars are not used when network_vars is NULL
   network_vars <- chosen_vars_handling(vars = network_vars, data = data, mat = mat, type = "network")
   auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, mat = mat, type = "auxiliary")
-  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, data = data, called_from = "after_network_vars_check")
 
   # If observed-data loglikelihood is used, scale data to have mean 0 and sd 1; data must be provided
   # and all variables must be treated as continuous
   if (likelihood == "obs_based"){
-    if (any(ordered)){
+    if (any(rep_len(ordered, length(network_vars))[seq_along(network_vars)])) {
     stop("Calculation of the observed data loglikelihood is only implemented for data
          treated as continuous. ")
     } else if (is.null(data)){
@@ -342,7 +342,6 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     } else if (!is.null(data) & !is.null(mat) & is.null(means)){
       stop("When likelihood = 'obs_based' and a user-supplied matrix is used for regularization, 'means' must be provided, as no estimation from raw data is performed.")
     }
-    data <- as.data.frame(scale(data))
   }
 
 
@@ -355,7 +354,7 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     list2env(cor_out, envir = environment())
     list2env(cor_out$args, envir = environment())
 
-    data <- data[, network_vars]
+    data <- data[, network_vars, drop = FALSE]
 
     # Determine effective sample size if not provided; check that ns is valid if provided
     if (is.null(ns)){
@@ -377,7 +376,7 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
       }
     message(msg, ".")
     mat <- mat[network_vars, network_vars]
-    data <- data[, network_vars]
+    data <- data[, network_vars, drop = FALSE]
     # If ns is not provided, calculate it based on data
     if (is.null(ns)) {
       n <- mat_calculate_sample_size(data = data, n_calc = n_calc, count_diagonal = count_diagonal)
@@ -419,6 +418,11 @@ regularization_net <- function(data = NULL, ns = NULL, mat = NULL,
     # Ensure mat is a correlation matrix
     mat <- stats::cov2cor(mat)
     nimp <- missing_handling <- cor_method <- imputed_data <-  NULL
+  }
+
+  # scale the remaining network data including the missings here
+  if (likelihood == "obs_based") {
+    data <- as.data.frame(scale(data))
   }
 
   # Call helper function to perform regularization and model selection

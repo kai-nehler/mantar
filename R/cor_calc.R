@@ -103,7 +103,7 @@ cor_calc <- function(data, ordered = FALSE,
   checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")
   network_vars <- chosen_vars_handling(vars = network_vars, data = data, type = "network")
   auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, type = "auxiliary")
-  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, data = data, called_from = "after_network_vars_check")
 
   # reduce data set to variables used for network estimation and auxiliary variables
   data <- data[, c(network_vars, auxiliary_vars), drop = FALSE]
@@ -113,6 +113,13 @@ cor_calc <- function(data, ordered = FALSE,
                                 choices = c("two-step-em", "stacked-mi", "pairwise", "listwise"))
   # Check data input - setting mat = NULL important to perform the correct check
   checker(data = data, mat = NULL)
+  # Check usage of auxiliary variables and their type
+  checker(
+    data = data,
+    network_vars = network_vars,
+    auxiliary_vars = auxiliary_vars,
+    missing_handling = missing_handling
+  )
 
   # Check ordered input to be logical, without NAs and have correct length
   if (any(is.na(ordered))) {
@@ -131,19 +138,31 @@ cor_calc <- function(data, ordered = FALSE,
       }
     }
 
-  # Check if package is installed if polychoric method is selected
+  # data contains network variables first, followed by auxiliary variables
+  ordered_network <- ordered[seq_along(network_vars)]
   any_ord <- any(ordered)
-  if (any_ord && !requireNamespace("lavaan", quietly = TRUE)) {
+
+  # Ordinal network correlations require lavaan
+  if (any(ordered_network) && !requireNamespace("lavaan", quietly = TRUE)) {
     stop(
-      "Package \"lavaan\" must be installed to compute polychoric or polyserial correlations.",
+      "Package 'lavaan' must be installed to compute polychoric ",
+      "or polyserial correlations.",
       call. = FALSE
     )
   }
 
-  # If no variable is treated as ordered, scale the raw data
-  if (!any_ord){
-    data <- as.data.frame(scale(data))
+  # Standardize continuous variables when all network nodes are continuous
+  data <- as.data.frame(data)
+  if (!any(ordered_network)) {
+    scale_vars <- vapply(data, is.numeric, logical(1)) & !ordered
+    data[scale_vars] <- lapply(data[scale_vars], function(x) {
+      as.numeric(scale(x))
+    })
   }
+
+  # Prepare means vector and imputed data output
+  means <- NULL
+  imputed_data <- NULL
 
   # Prepare means vector and imputed data output
   means <- NULL
@@ -204,7 +223,9 @@ cor_calc <- function(data, ordered = FALSE,
                                                   method = imp_method, ...))
       stacked_data <- mice::complete(imputed_data, c(1:nimp))
       colnames(stacked_data) <- original_names  # restore original column names
-      if (any_ord) {
+      stacked_data <- stacked_data[, network_vars, drop = FALSE] # reduce only to the network variables
+
+      if (any(ordered_network)) {
         mat <- suppressWarnings(
           try(lavaan::lavCor(stacked_data, ordered = names(data)[ordered],
                              se = "none", output = "cor"))

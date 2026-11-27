@@ -356,6 +356,8 @@ mlvar_simulate <- function(
 
         # Convert the simulated observations into a data frame.
         res <- as.data.frame(res)
+        # Add a tracker for the timepoints
+        res$time <- seq_len(nrow(res))
         # Add the ID of the current person.
         res$ID <- p
         # Return the simulated data for person p. lapply() collects these data frames in data_list.

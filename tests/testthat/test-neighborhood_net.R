@@ -38,13 +38,19 @@ test_that("errors in neighborhood network selection work for data input", {
   expect_error(neighborhood_net(
     data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
     ic_type = "bic"
-  ), "All variables in 'data' must be numeric.")
+  ), "All variables selected in 'network_vars' must be numeric. For ordered categorical variables stored as factors, supply numeric scores that reflect the intended category order. This requirement helps prevent unordered categories from being treated as ordered based on their internal factor codes.")
 
-  expect_error(neighborhood_net(
-    data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
-    mat = matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow =3),
-    ic_type = "bic"
-  ), "All variables in 'data' must be numeric.")
+  expect_error(
+    neighborhood_net(
+      data = cbind(mantar_dummy_full_cont, non_numeric = "a"),
+      mat = `dimnames<-`(
+        diag(ncol(mantar_dummy_full_cont) + 1L),
+        rep(list(c(colnames(mantar_dummy_full_cont), "non_numeric")), 2L)
+      ),
+      ic_type = "bic"
+    ),
+    "All variables selected in 'network_vars' must be numeric"
+  )
 })
 
 

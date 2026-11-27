@@ -148,7 +148,7 @@ test_that("errors in regression optimization work for data input", {
     dep_ind = 1,
     n = 100,
     ic_type = "bic"
-  ), "All variables in 'data' must be numeric.")
+  ), "All variables selected in 'network_vars' must be numeric. For ordered categorical variables stored as factors, supply numeric scores that reflect the intended category order. This requirement helps prevent unordered categories from being treated as ordered based on their internal factor codes.")
 
   expect_error(regression_opt(
     data =  cbind(mantar_dummy_full_cont, rep("a", nrow(mantar_dummy_full_cont))),  # non-numeric matrix
@@ -156,7 +156,7 @@ test_that("errors in regression optimization work for data input", {
     mat = matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow =3),
     n = 100,
     ic_type = "bic"
-  ), "All variables in 'data' must be numeric.")
+  ), "'mat' must be a symmetric matrix")
 })
 
 

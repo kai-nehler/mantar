@@ -185,7 +185,7 @@ neighborhood_net <- function(data = NULL, ns = NULL, mat = NULL,
   checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "before_network_vars_check")
   network_vars <- chosen_vars_handling(vars = network_vars, data = data, mat = mat, type = "network")
   auxiliary_vars <- chosen_vars_handling(vars = auxiliary_vars, data = data, mat = mat, type = "auxiliary")
-  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, called_from = "after_network_vars_check")
+  checker(network_vars = network_vars, auxiliary_vars = auxiliary_vars, data = data, called_from = "after_network_vars_check")
 
 
   # Calculate correlation matrix if data is provided
